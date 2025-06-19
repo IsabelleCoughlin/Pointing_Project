@@ -8,6 +8,7 @@
 import requests
 import json
 import time
+import socket
 
 host = "http://204.84.22.107:8091"
 fs_index = 0
@@ -63,6 +64,10 @@ result = generate_coordinates(grid_size)
 integration_time = 5 # FIXME: Calcualte the actual integration time and make it sit so it checks the position that often?
 # or it can check continuously
 
+url = "http://204.84.22.107:8091/sdrangel/deviceset/0/channel/1/actions"
+payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
+requests.post(url, json = payload)
+
 for coord in result: 
     
     correct_coordinates = False
@@ -76,7 +81,7 @@ for coord in result:
         if azRot is not None and elRot is not None:
             print(f"Current Coordinates: Azimuth: {azRot}, Elevation: {elRot}")
             # Check if the current coordinates match the target coordinates
-            if (azRot == (azTarget - azOff)) and (elRot == elTarget - elOff):
+            if ((abs((azRot - azOff - azTarget)) < 1) and (abs((elRot - elOff - elTarget)) < 1)):
                 correct_coordinates = True
             else:
                 print("Waiting for the rotator to reach the target coordinates...")
@@ -94,9 +99,10 @@ for coord in result:
     }
 
     patch_url = "http://204.84.22.107:8091/sdrangel/featureset/feature/0/settings"
-    patch_response = requests.patch(patch_url, json=payload)
-    print(f"PATCH status: {patch_response.status_code}")
-    print(patch_response.text)
+    requests.patch(patch_url, json=payload)
+    #patch_response = requests.patch(patch_url, json=payload)
+    #print(f"PATCH status: {patch_response.status_code}")
+    #print(patch_response.text)
 
     # Do I need an integration time here too?
-    #time.sleep(integration_time)
+    time.sleep(integration_time)
