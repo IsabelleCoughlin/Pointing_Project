@@ -9,16 +9,29 @@ import socket
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, host, port, rotator_host, rotator_port):
+    def __init__(self, host, port, rotator_host, rotator_port, radio_astronomy_index, rotator_index):
+        '''
+        comment wghat this section does
+        sef:SKen
+        '''
         self.host = host
         self.port = port
         self.rotator_host = rotator_host
         self.rotator_port = rotator_port
         self.base_url = f"http://{host}:{port}"
+        self.radio_astronomy_index = radio_astronomy_index
+        self.rotator_index = rotator_index
 
         # First should get info about where the instance is set up...atm mines at 1
 
         # Necessary URL's for REST API interaction
+
+        # Get info of device being used (default first device)
+        
+        
+
+        # Get index of radio astronomy channel
+        # Get index of rotator controller feature
 
         # accessing and editing rotator settings, such as position and offset
         self.rotator_settings_url = f"{self.base_url}/sdrangel/featureset/feature/0/settings"
@@ -27,6 +40,33 @@ class RotatorController:
         # action on radio astronomy plugin, for starting a scan
         self.astronomy_action_url = f"{self.base_url}/sdrangel/deviceset/0/channel/1/actions"
 
+    def get_device_settings(host, port):
+        device_settings_url = f"http://{host}:{port}/sdrangel"
+        radio_astronomy_index = None
+        rotator_index = None
+
+        try:
+            response = requests.get(device_settings_url)
+            if response.status_code == 200:
+                data = response.json()
+                devices = data.get("devicesetlist", {}).get("deviceSets", [])
+                for device in devices:
+                    channels = devices.get("channels", [])
+                    for channel in channels:
+                        if channel.get("title") == "Radio Astronomy":
+                            radio_astronomy_index = channel.get("index")
+                features = data.get("featureset", {}).get("features", [])
+                for feature in features:
+                    if feature.get("title") == "Rotator Controller":
+                        rotator_index = feature.get("index")
+                return radio_astronomy_index, rotator_index
+            else:
+                print(f"Error opening device settings: {response.status_code}")
+                return None
+        except Exception as e:
+            print(f"Error opening device settings: {e}")
+            return None
+    
     def generate_coordinates(self, size):
         coordinates = []
         for x in range(-size // 2 + 1, size // 2 + 1):
@@ -146,8 +186,9 @@ if __name__ == "__main__":
     port = 8091
     rotator_host = 'localhost'
     rotator_port = 4533
+    radio_astronomy_index, rotator_index = get_device_settings(host, port)
 
-    rotator = RotatorController(host, port, rotator_host, rotator_port)
+    rotator = RotatorController(host, port, rotator_host, rotator_port, radio_astronomy_index, rotator_index)
     
     grid_size = 5 
     rotator.start_raster(grid_size)
