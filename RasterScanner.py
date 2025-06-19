@@ -22,50 +22,13 @@ class RotatorController:
         self.radio_astronomy_index = radio_astronomy_index
         self.rotator_index = rotator_index
 
-        # First should get info about where the instance is set up...atm mines at 1
-
-        # Necessary URL's for REST API interaction
-
-        # Get info of device being used (default first device)
-        
-        
-
-        # Get index of radio astronomy channel
-        # Get index of rotator controller feature
-
         # accessing and editing rotator settings, such as position and offset
-        self.rotator_settings_url = f"{self.base_url}/sdrangel/featureset/feature/0/settings"
+        self.rotator_settings_url = f"{self.base_url}/sdrangel/featureset/feature/{self.rotator_index}/settings"
         # accessing radio astronomy feature plugin, for calculating integration time
-        self.astronomy_settings_url = f"{self.base_url}/sdrangel/deviceset/0/channel/1/settings"
+        self.astronomy_settings_url = f"{self.base_url}/sdrangel/deviceset/0/channel/{self.radio_astronomy_index}/settings"
         # action on radio astronomy plugin, for starting a scan
-        self.astronomy_action_url = f"{self.base_url}/sdrangel/deviceset/0/channel/1/actions"
+        self.astronomy_action_url = f"{self.base_url}/sdrangel/deviceset/0/channel/{self.radio_astronomy_index}/actions"
 
-    def get_device_settings(host, port):
-        device_settings_url = f"http://{host}:{port}/sdrangel"
-        radio_astronomy_index = None
-        rotator_index = None
-
-        try:
-            response = requests.get(device_settings_url)
-            if response.status_code == 200:
-                data = response.json()
-                devices = data.get("devicesetlist", {}).get("deviceSets", [])
-                for device in devices:
-                    channels = devices.get("channels", [])
-                    for channel in channels:
-                        if channel.get("title") == "Radio Astronomy":
-                            radio_astronomy_index = channel.get("index")
-                features = data.get("featureset", {}).get("features", [])
-                for feature in features:
-                    if feature.get("title") == "Rotator Controller":
-                        rotator_index = feature.get("index")
-                return radio_astronomy_index, rotator_index
-            else:
-                print(f"Error opening device settings: {response.status_code}")
-                return None
-        except Exception as e:
-            print(f"Error opening device settings: {e}")
-            return None
     
     def generate_coordinates(self, size):
         coordinates = []
@@ -157,7 +120,7 @@ class RotatorController:
         payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
         try: 
             response = requests.post(self.astronomy_action_url, json = payload)
-            if response.status_code != 200:
+            if response.status_code != 202:
                 print(f"Error starting Radio Astronomy scan: {response.status_code}")
         except Exception as e:
             print(f"Exception while starting Radio Astronomy scan: {e}")
@@ -180,6 +143,33 @@ class RotatorController:
 
             self.update_offsets(coord[0], coord[1], settings, data)
             time.sleep(integration_time)
+
+def get_device_settings(host, port):
+        device_settings_url = f"http://{host}:{port}/sdrangel"
+        radio_astronomy_index = None
+        rotator_index = None
+
+        try:
+            response = requests.get(device_settings_url)
+            if response.status_code == 200:
+                data = response.json()
+                devices = data.get("devicesetlist", {}).get("deviceSets", [])
+                for device in devices:
+                    channels = device.get("channels", [])
+                    for channel in channels:
+                        if channel.get("title") == "Radio Astronomy":
+                            radio_astronomy_index = channel.get("index")
+                features = data.get("featureset", {}).get("features", [])
+                for feature in features:
+                    if feature.get("title") == "Rotator Controller":
+                        rotator_index = feature.get("index")
+                return radio_astronomy_index, rotator_index
+            else:
+                print(f"Error opening device settings: {response.status_code}")
+                return None
+        except Exception as e:
+            print(f"Error opening device settings: {e}")
+            return None
 
 if __name__ == "__main__":
     host = "204.84.22.107"  
