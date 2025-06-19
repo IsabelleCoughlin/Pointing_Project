@@ -5,16 +5,17 @@
 # Furthermore, I can probably (?) cause it to start scanning so then we would know exactly what time it starts and when each cycle of the scan is done. But none of that
 # actually matters for the real use of the 26 meter (that's not true I could still use it to check at those intervals whether the motion is done)
 
+# Import statements
 import requests
 import json
 import time
 import socket
 
-host = "http://204.84.22.107:8091"
-fs_index = 0
-f_index = 0
-url = f"{host}/sdrangel/featureset/{fs_index}/feature/{f_index}/settings"
+# Improvements: Make this into class/module system
+# Make the url's more changeable and automatic
+# Add lots of comments
 
+# Function to generate coordinates for a square raster scan pattern (could be made into a circular pattern)
 def generate_coordinates(size):
     coordinates = []
     for x in range(-size // 2 + 1, size // 2 + 1):
@@ -22,6 +23,7 @@ def generate_coordinates(size):
             coordinates.append([x, y])
     return coordinates
 
+# Function to find the current rotator coordinates from Lamar's shim (currently using the dummy rotor)
 def current_coordinates(host='localhost', port=4533):
     try:
         # create socket and connect to the server
@@ -41,7 +43,8 @@ def current_coordinates(host='localhost', port=4533):
     except Exception as e:
         print(f"Error: {e}")
         return None, None
-    
+
+# Function to get the current settings from the GS232Controller in SDRangel
 def get_settings(url):
     response = requests.get(url)
     if response.status_code == 200:
@@ -58,6 +61,7 @@ def get_settings(url):
         print(f"Error fetching settings: {response.status_code}")
         return None
 
+# Main execution (put into modular classes later)
 grid_size = 5
 result = generate_coordinates(grid_size)
 
