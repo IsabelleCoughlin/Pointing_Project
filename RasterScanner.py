@@ -9,9 +9,11 @@ import socket
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, host, port):
+    def __init__(self, host, port, rotator_host, rotator_port):
         self.host = host
         self.port = port
+        self.rotator_host = rotator_host
+        self.rotator_port = rotator_port
         self.base_url = f"http://{host}:{port}"
 
         # First should get info about where the instance is set up...atm mines at 1
@@ -36,7 +38,7 @@ class RotatorController:
         try:
             # create socket and connect to the server
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((self.host, self.port))
+                s.connect((self.rotator_host, self.rotator_port))
                 
                 # p command gets the current position from dummy rotator
                 s.sendall(b'p\n')
@@ -61,8 +63,7 @@ class RotatorController:
             azOff = data['GS232ControllerSettings']['azimuthOffset']
             elOff = data['GS232ControllerSettings']['elevationOffset']
             settings = data['GS232ControllerSettings']
-            
-        
+
             return settings, data, azTarget, elTarget, azOff, elOff
         else:
             print(f"Error fetching settings: {response.status_code}")
@@ -78,14 +79,17 @@ class RotatorController:
                 FFT = data['RadioAstronomySettings']['integration']
                 channels = data['RadioAstronomySettings']['fftSize']
                 sample_rate = data['RadioAstronomySettings']['sampleRate']
-            return (FFT * channels) / sample_rate
+                return (FFT * channels) / sample_rate
+            else:
+                    print(f"Error updating offsets: {response.status_code}")
+        
         except Exception as e:
             print(f"Error calculating integration time: {e}")
             return None
     
-    def update_offsets(self, azOff, elOff, settings, data):
-        settings["azimuthOffset"] = coord[0]
-        settings["elevationOffset"] = coord[1]
+    def update_offsets(self, azOff_new, elOff_new, settings, data):
+        settings["azimuthOffset"] = azOff_new
+        settings["elevationOffset"] = elOff_new
 
         payload = {
             "featureType": "GS232Controller",
@@ -97,7 +101,7 @@ class RotatorController:
         try:
             response = requests.patch(self.rotator_settings_url, json=payload)
             if response.status_code == 200:
-                print(f"Offsets updated to azimuth: {azOff}, elevation: {elOff}")
+                print(f"Offsets updated to azimuth: {azOff_new}, elevation: {elOff_new}")
             else:
                 print(f"Error updating offsets: {response.status_code}")
         except Exception as e:
@@ -138,10 +142,12 @@ class RotatorController:
             time.sleep(integration_time)
 
 if __name__ == "__main__":
-    host = "localhost"  
+    host = "204.84.22.107"  
     port = 8091
+    rotator_host = 'localhost'
+    rotator_port = 4533
 
-    rotator = RotatorController(host, port)
+    rotator = RotatorController(host, port, rotator_host, rotator_port)
     
     grid_size = 5 
     rotator.start_raster(grid_size)
