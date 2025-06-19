@@ -61,7 +61,20 @@ def get_settings(url):
 grid_size = 5
 result = generate_coordinates(grid_size)
 
-integration_time = 5 # FIXME: Calcualte the actual integration time and make it sit so it checks the position that often?
+# Integration time is calculated as Tau = (FFT * Channels) / Sample Rate
+url_get = "http://204.84.22.107:8091/sdrangel/deviceset/0/channel/1/settings"
+response = requests.get(url_get)
+data = response.json()
+# Extracting the necessary values from the response
+FFT = data['RadioAstronomySettings']['integration']
+channels = data['RadioAstronomySettings']['fftSize']
+sample_rate = data['RadioAstronomySettings']['sampleRate']
+
+# Calculate the integration time in seconds
+integration_time = (FFT * channels) / sample_rate
+print(integration_time)
+
+#integration_time = 5 # FIXME: Calcualte the actual integration time and make it sit so it checks the position that often?
 # or it can check continuously
 
 url = "http://204.84.22.107:8091/sdrangel/deviceset/0/channel/1/actions"
