@@ -59,7 +59,7 @@ class RadioGUI:
         self.freq_combo = ttk.Combobox(freq_frame, width=30)
         self.freq_combo['values'] = ('100700000', '93700000', '101000000', '100100000', '89200000', '105100000', '102200000', '103600000')
         self.freq_combo.grid(row=0, column=1, padx=10)
-        self.freq_combo.current(0)
+        self.freq_combo.current()
 
         ttk.Button(freq_frame, text="Set Frequency", command=self.set_frequency).grid(row=0, column=2, padx=10)
 

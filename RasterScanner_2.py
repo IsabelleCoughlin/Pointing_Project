@@ -1,4 +1,4 @@
-# RasterScanner.py
+# RasterScanner_2.py
 
 # Import necessary libraries
 import requests
@@ -10,15 +10,11 @@ host = "204.84.22.107"
 port = 8091
 rotator_host = 'localhost'
 rotator_port = 4533
-grid_size = 2
 
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
     def __init__(self, host, port, rotator_host, rotator_port):#, radio_astronomy_index, rotator_index):
-        '''
-        
-        '''
         self.host = host
         self.port = port
         self.rotator_host = rotator_host
@@ -26,7 +22,8 @@ class RotatorController:
         self.base_url = f"http://{host}:{port}"
     
     def get_urls(self):
-        radio_astronomy_index, rotator_index = self.get_device_settings()
+        radio_astronomy_index, rotator_index, star_tracker_index = self.get_device_settings()
+        #self.rotator_index = rotator_index
 
         # accessing and editing rotator settings, such as position and offset
         rotator_settings_url = f"{self.base_url}/sdrangel/featureset/feature/{rotator_index}/settings"
@@ -35,12 +32,15 @@ class RotatorController:
         # action on radio astronomy plugin, for starting a scan
         astronomy_action_url = f"{self.base_url}/sdrangel/deviceset/0/channel/{radio_astronomy_index}/actions"
 
-        return rotator_settings_url, astronomy_settings_url, astronomy_action_url
+        star_tracker_url = f"{self.base_url}/sdrangel/featureset/feature/{star_tracker_index}/settings"
+
+        return rotator_settings_url, astronomy_settings_url, astronomy_action_url, star_tracker_url
 
     def get_device_settings(self):
         device_settings_url = f"http://{self.host}:{self.port}/sdrangel"
         radio_astronomy_index = None
         rotator_index = None
+        star_tracker_index = None
 
         try:
             response = requests.get(device_settings_url)
@@ -56,41 +56,39 @@ class RotatorController:
                 for feature in features:
                     if feature.get("title") == "Rotator Controller":
                         rotator_index = feature.get("index")
-                return radio_astronomy_index, rotator_index
+                    if feature.get("title") == "Star Tracker":
+                        star_tracker_index = feature.get("index")
+                return radio_astronomy_index, rotator_index, star_tracker_index
             else:
                 print(f"Error opening device settings: {response.status_code}")
-                return None, None
+                return None, None, None
         except Exception as e:
             print(f"Error opening device settings: {e}")
-            return None, None
+            return None, None, None
 
-    def generate_coordinates(self, size, precision):
-        pres_num = 10**(-1*precision)
 
+    
+    def generate_coordinates(self, size):
         coordinates = []
-        for x in range(-size // 2 + pres_num, size // 2 + pres_num):
-            for y in range(-size // 2 + pres_num, size // 2 + pres_num):
+        for x in range(-size // 2 + 1, size // 2 + 1):
+            for y in range(-size // 2 + 1, size // 2 + 1):
                 coordinates.append([x, y])
         return coordinates
 
-    def current_coordinates(self):
+    def get_star_tracker_coordinates(self, url):
         try:
-            # create socket and connect to the server
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((self.rotator_host, self.rotator_port))
-                
-                # p command gets the current position from dummy rotator
-                s.sendall(b'p\n')
-                
-                # get the response and decode it
-                response = s.recv(1024).decode('utf-8').strip()
-                
-                # Parse the response from "<azimuth> <elevation>")
-                azimuth, elevation = map(float, response.split())
-                
-                return azimuth, elevation
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                azStar = data['StarTrackerSettings']['azimuth']
+                elStar = data['StarTrackerSettings']['elevation']
+                return azStar, elStar
+            else:
+                print(f"Error getting star tracker coordinates: {response.status_code}")
+                return None, None
+                    
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error in getting star tracker coordinates: {e}")
             return None, None
         
     def get_rotator_settings(self, url):
@@ -109,9 +107,6 @@ class RotatorController:
             return None
         
     def calculate_integration_time(self, url):
-        '''
-        
-        '''
         try:
             response = requests.get(url)
             if response.status_code == 200:
@@ -130,9 +125,6 @@ class RotatorController:
             return None
     
     def update_offsets(self, azOff_new, elOff_new, settings, data, url):
-        '''
-        
-        '''
         settings["azimuthOffset"] = azOff_new
         settings["elevationOffset"] = elOff_new
 
@@ -152,37 +144,13 @@ class RotatorController:
         except Exception as e:
             print(f"Exception while updating offsets: {e}")
 
-    def set_precision(self, precision, url):
-        # do ta thing
-        settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(url)
-        settings["precision"] = precision
-
-        payload = {
-            "featureType": "GS232Controller",
-            "originatorFeatureSetIndex": data.get("originatorFeatureSetIndex", 0),
-            "originatorFeatureIndex": data.get("originatorFeatureIndex", 0),
-            "GS232ControllerSettings": settings
-        }
-
-        try:
-            response = requests.patch(url, json=payload)
-            if response.status_code != 200:
-                print(f"Error setting precision: {response.status_code}")
-        except Exception as e:
-            print(f"Exception while setting precision: {e}")
-
-    def start_raster(self, grid_size, precision):
-        '''
-        
-        '''
-        rotator_settings_url, astronomy_settings_url, astronomy_action_url = self.get_urls()
-        coordinates = self.generate_coordinates(grid_size, precision)
-        self.set_precision(precision, rotator_settings_url)
+    def start_raster(self, grid_size):
+        rotator_settings_url, astronomy_settings_url, astronomy_action_url, star_tracker_url = self.get_urls()
+        coordinates = self.generate_coordinates(grid_size)
         integration_time = self.calculate_integration_time(astronomy_settings_url)
         if integration_time is None:
             print("Failed to calculate integration time.")
             return
-        
         payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
         try: 
             response = requests.post(astronomy_action_url, json = payload)
@@ -196,12 +164,12 @@ class RotatorController:
             correct_coordinates = False
             while not correct_coordinates:
                 settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(rotator_settings_url)
-                azRot, elRot = self.current_coordinates()
+                azStar, elStar = self.get_star_tracker_coordinates(star_tracker_url)
 
-                if azRot is not None and elRot is not None:
-                    print(f"Current Coordinates: Azimuth: {azRot}, Elevation: {elRot}")
-                    if ((abs((azRot - azOff - azTarget)) < 1) and
-                        (abs((elRot - elOff - elTarget)) < 1)):
+                if azStar is not None and elStar is not None:
+                    print(f"Current Coordinates from StarTracker: Azimuth: {azStar}, Elevation: {elStar}")
+                    if ((abs((azStar - azOff - azTarget)) < 5) and
+                        (abs((elStar - elOff - elTarget)) < 5)):
                         correct_coordinates = True
                     else:
                         print("Waiting for the rotator to reach the target coordinates...")
@@ -210,14 +178,12 @@ class RotatorController:
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
             time.sleep(integration_time)
 
+
 if __name__ == "__main__":
-
-    rotator = RotatorController(host, port, rotator_host, rotator_port)
-    #grid_size = 5 
-    rotator.start_raster(grid_size)
-            
-
-
-            
-            
     
+    #radio_astronomy_index, rotator_index = get_device_settings(host, port)
+
+    rotator = RotatorController(host, port, rotator_host, rotator_port)#, radio_astronomy_index, rotator_index)
+    
+    grid_size = 5 
+    rotator.start_raster(grid_size)

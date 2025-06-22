@@ -1,4 +1,4 @@
-# RasterScanner.py
+# RasterScannerGUI.py
 
 # Import necessary libraries
 import tkinter as tk
@@ -9,15 +9,14 @@ from tkinter import messagebox
 
 class RotatorGUI:
 
-    # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, root, host, port, rotator_host, rotator_port):
+    def __init__(self, root):
         self.root = root
         self.root.title("Raster Scan Controller")
-        self.controller = RotatorController(host, port, rotator_host, rotator_port) 
-        self.root.geometry("700x700")
+        
+        self.root.geometry("700x900")
         self.root.configure(bg="#f0f0f0")
 
-        # Build the GUI
+        # Build the GUI header and title
         self.build_header()
         self.build_title()
 
@@ -27,6 +26,42 @@ class RotatorGUI:
 
         self.grid_entry = tk.Entry(root)
         self.grid_entry.pack()
+        self.grid_entry.insert(0, "5")  # Default value
+
+        self.SDRangel_host_label = tk.Label(root, text="Host of SDRangel:")
+        self.SDRangel_host_label.pack()
+
+        self.SDRangel_host_entry = tk.Entry(root)
+        self.SDRangel_host_entry.pack()
+        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
+
+        self.SDRangel_port_label = tk.Label(root, text="Port of SDRangel:")
+        self.SDRangel_port_label.pack()
+
+        self.SDRangel_port_entry = tk.Entry(root)
+        self.SDRangel_port_entry.pack()
+        self.SDRangel_port_entry.insert(0, "8091")  # Default value
+
+        self.rotator_host_label = tk.Label(root, text="Host of Rotator:")
+        self.rotator_host_label.pack()
+
+        self.rotator_host_entry = tk.Entry(root)
+        self.rotator_host_entry.pack()
+        self.rotator_host_entry.insert(0, "localhost")  # Default value
+
+        self.rotator_port_label = tk.Label(root, text="Port of Rotator:")
+        self.rotator_port_label.pack()
+
+        self.rotator_port_entry = tk.Entry(root)
+        self.rotator_port_entry.pack()
+        self.rotator_port_entry.insert(0, "4533")  # Default value
+
+        self.precision_label = tk.Label(root, text="Precision (how many after decimal):")
+        self.precision_label.pack()
+
+        self.precision_entry = tk.Entry(root)
+        self.precision_entry.pack()
+        self.precision_entry.insert(0, "2")  # Default value
 
         self.start_button = tk.Button(root, text="Start Scan", command=self.start_scan)
         self.start_button.pack()
@@ -36,25 +71,28 @@ class RotatorGUI:
 
     def start_scan(self):
         """
-        Start the scan process when the button is clicked.
+        Start the scan process from RasterScanner.py when the button is clicked.
         """
-        try:
-            grid_size = int(self.grid_entry.get())
-            self.status_label.config(text="Status: Scanning...")
-            self.controller.start_raster(grid_size)
-            self.status_label.config(text="Status: Scan Complete")
-        except ValueError:
-            messagebox.showerror("Input Error", "Please enter a valid grid size.")
-        except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
-            self.status_label.config(text="Status: Error")
 
-        
+        # FIXME: Add exceptions if these values aren't good
+        grid_size = int(self.grid_entry.get())
+        host = self.SDRangel_host_entry.get()
+        port = int(self.SDRangel_port_entry.get())
+        rotator_host = self.rotator_host_entry.get()
+        rotator_port = int(self.rotator_port_entry.get())
+        precision = int(self.precision_entry.get())
+
+        self.controller = RotatorController(host, port, rotator_host, rotator_port) 
+        self.status_label.config(text="Status: Scanning...")
+        self.controller.start_raster(grid_size, precision)
+        self.status_label.config(text="Status: Scan Complete")
+
     def build_header(self):
         header_frame = tk.Frame(self.root, bg="#f0f0f0")
         header_frame.pack(pady=10)
 
         try:
+            #FIXME: This image path won't work on another computer but it doesn't crash just doesnt show up
             image_path = "/Users/isabe/Pictures/maxwellcololr062.jpg"
             img = Image.open(image_path)
             img = img.resize((280,300), Image.Resampling.LANCZOS)
@@ -69,19 +107,9 @@ class RotatorGUI:
         title = tk.Label(self.root, text = "Raster Scan Page",
                          font = ("Helvetica", 16, "bold"), bg = "#f0f0f0", fg = "#333")
         title.pack(pady = 10)
-
     
-        
-
-
 if __name__ == "__main__":
     root = tk.Tk()
-
-    host = "204.84.22.107"  
-    port = 8091
-    rotator_host = 'localhost'
-    rotator_port = 4533
-
-    app = RotatorGUI(root, host, port, rotator_host, rotator_port)
+    app = RotatorGUI(root)
     root.mainloop()
     
