@@ -63,9 +63,131 @@ class BlankSlate:
         data = response.json()
         names = [item["displayedName"] for item in data.get("devices", [])]
         return names
+    
+    def add_radio_astronomy(self):
+
+        # FIXME: Make it more universal, maybe add in the specific integration time needs
+
+        url = f"{self.base_url}/sdrangel/deviceset/0/channel"
+
+        payload = {
+                "channelType": "RadioAstronomy",
+                "direction": 0,
+                "originatorDeviceSetIndex": 0,
+                "originatorChannelIndex": 0,
+                "RadioAstronomySettings": {
+                    "inputFrequencyOffset": 0,
+                    "sampleRate": 2048000,
+                    "rfBandwidth": 2000000,
+                    "integration": 100,
+                    "fftSize": 1024,
+                    "fftWindow": 3,
+                    "filterFreqs": "",
+                    "starTracker": "",
+                    "rotator": "",
+                    "runMode": 0,
+                    "sweepStartAtTime": 0,
+                    "sweepStartDateTime": "",
+                    "sweepType": 0,
+                    "sweep1Start": 0,
+                    "sweep1Stop": 0,
+                    "sweep1Step": 0,
+                    "sweep1Delay": 0,
+                    "sweep2Start": 0,
+                    "sweep2Stop": 0,
+                    "sweep2Step": 0,
+                    "sweep2Delay": 0,
+                    "rgbColor": 16711680,
+                    "title": "Radio Astronomy Channel",
+                    "streamIndex": 0,
+                    "useReverseAPI": 1,
+                    "reverseAPIAddress": "204.84.22.41",
+                    "reverseAPIPort": 8888,
+                    "reverseAPIDeviceIndex": 0,
+                    "reverseAPIChannelIndex": 1,
+                    "channelMarker": {
+                    "centerFrequency": 1420000000,
+                    "color": 65280,
+                    "title": "Hydrogen Line",
+                    "frequencyScaleDisplayType": 1
+                    },
+                    "rollupState": {
+                    "version": 1,
+                    "childrenStates": [
+                        {
+                        "objectName": "Main FFT",
+                        "isHidden": 0
+                        }
+                    ]
+
+                    }
+                }
+            }
+        
+        requests.post(url, json = payload)
+
+        
+
+    def add_star_tracker(self):
+        url = f"{self.base_url}/sdrangel/featureset/feature"
+
+        payload = {
+                "featureType": "StarTracker",
+                "originatorFeatureSetIndex": 0,
+                "originatorFeatureIndex": 0,
+                "StarTrackerSettings": {
+                    "target": "Cas A",
+                    "ra": "23:23:27.94",
+                    "dec": "+58:48:42.4",
+                    "azimuth": 0,
+                    "elevation": 0,
+                    "l": 111.735,
+                    "b": -2.134,
+                    "azimuthOffset": 0,
+                    "elevationOffset": 0,
+                    "latitude": 35.436,
+                    "longitude": -82.816,
+                    "dateTime": "2025-06-12T12:00:00",
+                    "refraction": "standard",
+                    "pressure": 1013.25,
+                    "temperature": 15,
+                    "humidity": 50,
+                    "heightAboveSeaLevel": 800,
+                    "temperatureLapseRate": 0.0065,
+                    "frequency": 1420000000,
+                    "stellariumServerEnabled": 1,
+                    "stellariumPort": 10001,
+                    "updatePeriod": 1000,
+                    "epoch": "J2000",
+                    "drawSunOnMap": 1,
+                    "drawMoonOnMap": 1,
+                    "drawStarOnMap": 1,
+                    "title": "Star Tracker",
+                    "rgbColor": -16776961,
+                    "useReverseAPI": 0,
+                    "reverseAPIAddress": "127.0.0.1",
+                    "reverseAPIPort": 8888,
+                    "reverseAPIFeatureSetIndex": 0,
+                    "reverseAPIFeatureIndex": 0,
+                    "rollupState": {
+                        "version": 0,
+                        "childrenStates": [
+                            {
+                            "objectName": "settingsContainer",
+                            "isHidden": 0
+                            }
+                        ]
+                    }
+                }
+            }
+        requests.post(url, json = payload)
+
+
 
 
 if __name__ == "__main__":
     b = BlankSlate(host, port, rotator_host, rotator_port)
     b.add_device(display_name, 0) # index of device you would like to add
+    b.add_radio_astronomy()
+    b.add_star_tracker()
     

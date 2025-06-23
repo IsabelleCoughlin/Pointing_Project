@@ -97,6 +97,12 @@ class BlankSlateGUI:
         selected_device_index = self.devind_entry.get()
         self.controller.add_device(selected_device_name, selected_device_index)
 
+    def build_radio_astronomy(self):
+        self.controller.add_radio_astronomy()
+
+    def build_star_tracker(self):
+        self.controller.add_star_tracker()
+
 # ==== Run App ====
 if __name__ == "__main__":
     root = tk.Tk()

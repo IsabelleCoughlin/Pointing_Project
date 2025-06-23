@@ -327,7 +327,7 @@ if __name__ == "__main__":
 
     rotator = RotatorController(host, port, rotator_host, rotator_port, rotator_connection)
 
-    rotator.start_raster(grid_size, precision, rotator_connection)
+    rotator.start_raster(grid_size, precision)
             
 
 
