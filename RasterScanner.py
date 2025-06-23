@@ -24,13 +24,14 @@ port = 8091
 rotator_host = 'localhost'
 rotator_port = 4533
 grid_size = 3
-precision = 2
+precision = 0
 rotator_connection = True
+tolerance = 0.1
 
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, host, port, rotator_host, rotator_port, rotator_boolean):#, radio_astronomy_index, rotator_index):
+    def __init__(self, host, port, rotator_host, rotator_port):#, radio_astronomy_index, rotator_index):
         '''
         Method to initialize an instance of the RotatorController class with pre-requisite info to connect to the 
         machine running SDRangel and access the REST API information.
@@ -41,13 +42,12 @@ class RotatorController:
         self.rotator_host = rotator_host
         self.rotator_port = rotator_port
         self.base_url = f"http://{host}:{port}"
-        self.rotator_connection = rotator_boolean
     
     def get_urls(self):
         '''
         Method to define necessary URL's to connect to SDRangel REST API information. 
         '''
-        radio_astronomy_index, rotator_index, star_tracker_index = self.get_device_settings()
+        radio_astronomy_index, rotator_index = self.get_device_settings()
 
         # accessing and editing rotator settings, such as position and offset
         rotator_settings_url = f"{self.base_url}/sdrangel/featureset/feature/{rotator_index}/settings"
@@ -56,9 +56,11 @@ class RotatorController:
         # action on radio astronomy plugin, for starting a scan
         astronomy_action_url = f"{self.base_url}/sdrangel/deviceset/0/channel/{radio_astronomy_index}/actions"
 
-        star_tracker_url = f"{self.base_url}/sdrangel/featureset/feature/{star_tracker_index}/settings"
+        #star_tracker_url = f"{self.base_url}/sdrangel/featureset/feature/{star_tracker_index}/settings"
 
-        return rotator_settings_url, astronomy_settings_url, astronomy_action_url, star_tracker_url
+        rotator_report_url = f"{self.base_url}/sdrangel/featureset/feature/{rotator_index}/report"
+
+        return rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url
 
 
     def get_device_settings(self):
@@ -69,10 +71,10 @@ class RotatorController:
         # FIXME: Create automatic setup which includes necessary devices, features, and channels from blank slate. 
         # FIXME: Optimize code using next()
         '''
-        device_settings_url = f"http://{self.host}:{self.port}/sdrangel"
         radio_astronomy_index = None
         rotator_index = None
-        star_tracker_index = None
+        #star_tracker_index = None
+        device_settings_url = f"http://{self.host}:{self.port}/sdrangel"
 
         try:
             response = requests.get(device_settings_url)
@@ -88,17 +90,17 @@ class RotatorController:
                 for feature in features:
                     if feature.get("title") == "Rotator Controller":
                         rotator_index = feature.get("index")
-                    if feature.get("title") == "Star Tracker":
-                        star_tracker_index = feature.get("index")
-                return radio_astronomy_index, rotator_index, star_tracker_index
+                    #if feature.get("title") == "Star Tracker":
+                        #star_tracker_index = feature.get("index")
+                return radio_astronomy_index, rotator_index#, star_tracker_index
             else:
                 print(f"Error opening device settings: {response.status_code}")
-                return None, None, None
+                return None, None
         except Exception as e:
             print(f"Error opening device settings: {e}")
-            return None, None, None
+            return None, None
 
-    def generate_coordinates(self, size, precision): # From leetcode implementation
+    def generate_offsets_grid(self, size, precision): # From leetcode implementation
         '''
         Method to generate coordinates of Elevation and Azimuth offsets in a spiral matrix traversal pattern, beginning at (0,0)
         in the center where offsets are null. Continues in a counter-clockwise traversal, with a grid spacing defined by the precision
@@ -136,51 +138,24 @@ class RotatorController:
             
         return coordinates
 
-    def current_coordinates(self):
-        '''
-        Method which connects to the rotator through network IP connection and recieved the current position that it is pointed
-        This information is not available through REST API, although it is shown on the screen of SDRAngel in the Rotator Controller
-        interface. It is less ideal to have to communicate with the rotator or excomctld-ts.py shim directly, thus there may be improvements.
-        
-        This information is vital to force the rotator to wait until it is in the correctly commanded location, including programmed offsets, 
-        for it to move onto the next scan location. Since the telescope takes non-negligible amount of time to move into position, 
-        it must be ensured to have reached the correct location.
-        '''
 
-        try:
-            # create socket and connect to the server
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((self.rotator_host, self.rotator_port))
-                
-                # p command gets the current position from dummy rotator
-                s.sendall(b'p\n')
-                
-                # get the response and decode it
-                response = s.recv(1024).decode('utf-8').strip()
-                
-                # Parse the response from "<azimuth> <elevation>")
-                azimuth, elevation = map(float, response.split())
-                
-                return azimuth, elevation
-        except Exception as e:
-            print(f"Error: {e}")
-            return None, None
-        
-    def get_star_tracker_coordinates(self, url):
+    def get_coordinates(self, url):
         try:
             response = requests.get(url)
             if response.status_code == 200:
                 data = response.json()
-                azStar = data['StarTrackerSettings']['azimuth']
-                elStar = data['StarTrackerSettings']['elevation']
-                return azStar, elStar
+                currentAz = data["GS232ControllerReport"]['currentAzimuth']
+                currentEl = data["GS232ControllerReport"]['currentElevation']
+                targetAz = data["GS232ControllerReport"]['targetAzimuth']
+                targetEl = data["GS232ControllerReport"]['targetElevation']
+                return currentAz, currentEl, targetAz, targetEl
             else:
-                print(f"Error getting star tracker coordinates: {response.status_code}")
-                return None, None
+                print(f"Error getting rotator coordinates: {response.status_code}")
+                return None, None, None, None
                     
         except Exception as e:
-            print(f"Error in getting star tracker coordinates: {e}")
-            return None, None
+            print(f"Error in getting rotator coordinates: {e}")
+            return None, None, None, None
         
     def get_rotator_settings(self, url):
         '''
@@ -247,19 +222,20 @@ class RotatorController:
 
         try:
             response = requests.patch(url, json=payload)
-            if response.status_code == 200:
-                print(f"Offsets updated to azimuth: {azOff_new}, elevation: {elOff_new}")
-            else:
+            if response.status_code != 200:
+                #print(f"Offsets updated to azimuth: {azOff_new}, elevation: {elOff_new}")
+            #else:
                 print(f"Error updating offsets: {response.status_code}")
         except Exception as e:
             print(f"Exception while updating offsets: {e}")
 
-    def set_precision(self, precision, url):
+    def set_precision(self, precision, tolerance, url):
         '''
         Method to patch the user-defined precision value to the Rotator Controller through REST API. 
         '''
         settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(url)
         settings["precision"] = precision
+        settings["tolerance"] = tolerance
 
         payload = {
             "featureType": "GS232Controller",
@@ -271,11 +247,11 @@ class RotatorController:
         try:
             response = requests.patch(url, json=payload)
             if response.status_code != 200:
-                print(f"Error setting precision: {response.status_code}")
+                print(f"Error setting precision and tolerance: {response.status_code}")
         except Exception as e:
-            print(f"Exception while setting precision: {e}")
+            print(f"Exception while setting precision and tolerance: {e}")
 
-    def start_raster(self, grid_size, precision):
+    def start_raster(self, grid_size, precision, tolerance):
         '''
         Method to begin the raster scan and call all of the other methods. Beigns by generating the necessary URL's to connect to 
         REST API, generating the offset scanning coordinates, patching the precision to SDRAngel, and calculating the integration time. 
@@ -287,9 +263,9 @@ class RotatorController:
 
         # FIXME: precision of 1 is not enough for the taregt and current position
         '''
-        rotator_settings_url, astronomy_settings_url, astronomy_action_url, star_tracker_url = self.get_urls()
-        coordinates = self.generate_coordinates(grid_size, precision)
-        self.set_precision(precision, rotator_settings_url)
+        rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
+        coordinates = self.generate_offsets_grid(grid_size, precision)
+        self.set_precision(precision, tolerance, rotator_settings_url)
         integration_time = self.calculate_integration_time(astronomy_settings_url)
         payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
         try: 
@@ -303,31 +279,29 @@ class RotatorController:
         for coord in coordinates:
             correct_coordinates = False
             while not correct_coordinates:
-                settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(rotator_settings_url)
+                settings, data, _, _, azOff, elOff = self.get_rotator_settings(rotator_settings_url)
                 
-                if self.rotator_connection:
-                    azRot, elRot = self.current_coordinates()
+                currentAz, currentEl, targetAz, targetEl = self.get_coordinates(rotator_report_url)
+
+                print(f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}")
+                print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
+                print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
+                
+                if ((abs((targetAz - currentAz) - azOff) < tolerance) and
+                    (abs((targetEl - currentEl) - elOff) < tolerance)):
+                    correct_coordinates = True
                 else:
-                    azRot, elRot = self.get_star_tracker_coordinates(star_tracker_url)
-
-
-                if azRot is not None and elRot is not None:
-                    print(f"Current Coordinates: Azimuth: {azRot}, Elevation: {elRot}")
-                    if ((abs((azRot - azOff - azTarget)) < 1) and
-                        (abs((elRot - elOff - elTarget)) < 1)):
-                        correct_coordinates = True
-                    else:
-                        print("Waiting for the rotator to reach the target coordinates...")
-                        time.sleep(integration_time)
+                    print("Waiting for the rotator to reach the target coordinates...")
+                    time.sleep(integration_time)
 
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
             time.sleep(integration_time)
 
 if __name__ == "__main__":
 
-    rotator = RotatorController(host, port, rotator_host, rotator_port, rotator_connection)
+    rotator = RotatorController(host, port, rotator_host, rotator_port)
 
-    rotator.start_raster(grid_size, precision)
+    rotator.start_raster(grid_size, precision, tolerance)
             
 
 
