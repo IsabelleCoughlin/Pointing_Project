@@ -1,4 +1,4 @@
-points = 5
+points = 7
 pres_num = 0.1
 coordinates = []
 

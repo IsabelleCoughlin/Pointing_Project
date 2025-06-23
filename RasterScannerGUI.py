@@ -63,6 +63,13 @@ class RotatorGUI:
         self.precision_entry.pack()
         self.precision_entry.insert(0, "2")  # Default value
 
+        self.rotator_boolean_label = tk.Label(root, text="Connect to Rotator Shim ?:")
+        self.rotator_boolean_label.pack()
+
+        self.rotator_boolean_entry = tk.Entry(root)
+        self.rotator_boolean_entry.pack()
+        self.rotator_boolean_entry.insert(0, "True")  # Default value
+
         self.start_button = tk.Button(root, text="Start Scan", command=self.start_scan)
         self.start_button.pack()
 
@@ -81,8 +88,9 @@ class RotatorGUI:
         rotator_host = self.rotator_host_entry.get()
         rotator_port = int(self.rotator_port_entry.get())
         precision = int(self.precision_entry.get())
+        rotator_boolean = eval(self.rotator_boolean_entry.get())
 
-        self.controller = RotatorController(host, port, rotator_host, rotator_port) 
+        self.controller = RotatorController(host, port, rotator_host, rotator_port, rotator_boolean) 
         self.status_label.config(text="Status: Scanning...")
         self.controller.start_raster(grid_size, precision)
         self.status_label.config(text="Status: Scan Complete")

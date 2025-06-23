@@ -1,32 +1,53 @@
 # RasterScanner.py
 
+'''
+RasterScanner.py class performs a raster scan through SDRangel given a number of points to visit and perform a scan at, and the 
+precision of the movement, or how far in between the points. These are inputted by user by calling the RasterScannerGUI.py
+which automatically makes a class of the RasterScanner.py. It is able to be run on localhost or through IP connection over network
+and is also currently set up to connect to the dummy rotor control, also connected over network and defined in excomctld-ts.py
+created by Lamar Owens. In RasterScanner_2.py, the connection to the rotor is ommitted and the rotator accuracy is compared to the 
+given coordinates of the Star Tracker feature. 
+'''
+
 # Import necessary libraries
 import requests
 import json
 import time
 import socket
 
+'''
+Local variables defined but also overwritten by GUI user input
+'''
+
 host = "204.84.22.107"  
 port = 8091
 rotator_host = 'localhost'
 rotator_port = 4533
-grid_size = 2
+grid_size = 3
+precision = 2
+rotator_connection = True
 
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, host, port, rotator_host, rotator_port):#, radio_astronomy_index, rotator_index):
+    def __init__(self, host, port, rotator_host, rotator_port, rotator_boolean):#, radio_astronomy_index, rotator_index):
         '''
-        
+        Method to initialize an instance of the RotatorController class with pre-requisite info to connect to the 
+        machine running SDRangel and access the REST API information.
+
         '''
         self.host = host
         self.port = port
         self.rotator_host = rotator_host
         self.rotator_port = rotator_port
         self.base_url = f"http://{host}:{port}"
+        self.rotator_connection = rotator_boolean
     
     def get_urls(self):
-        radio_astronomy_index, rotator_index = self.get_device_settings()
+        '''
+        Method to define necessary URL's to connect to SDRangel REST API information. 
+        '''
+        radio_astronomy_index, rotator_index, star_tracker_index = self.get_device_settings()
 
         # accessing and editing rotator settings, such as position and offset
         rotator_settings_url = f"{self.base_url}/sdrangel/featureset/feature/{rotator_index}/settings"
@@ -35,12 +56,23 @@ class RotatorController:
         # action on radio astronomy plugin, for starting a scan
         astronomy_action_url = f"{self.base_url}/sdrangel/deviceset/0/channel/{radio_astronomy_index}/actions"
 
-        return rotator_settings_url, astronomy_settings_url, astronomy_action_url
+        star_tracker_url = f"{self.base_url}/sdrangel/featureset/feature/{star_tracker_index}/settings"
+
+        return rotator_settings_url, astronomy_settings_url, astronomy_action_url, star_tracker_url
+
 
     def get_device_settings(self):
+        '''
+        Method to obtain current device settings (after full setup including Rotator Controller and Radio Astronomy plugins)
+        which allows us to obtain the indices of the features or channels to complete the URL's for further REST_API access.
+
+        # FIXME: Create automatic setup which includes necessary devices, features, and channels from blank slate. 
+        # FIXME: Optimize code using next()
+        '''
         device_settings_url = f"http://{self.host}:{self.port}/sdrangel"
         radio_astronomy_index = None
         rotator_index = None
+        star_tracker_index = None
 
         try:
             response = requests.get(device_settings_url)
@@ -56,24 +88,65 @@ class RotatorController:
                 for feature in features:
                     if feature.get("title") == "Rotator Controller":
                         rotator_index = feature.get("index")
-                return radio_astronomy_index, rotator_index
+                    if feature.get("title") == "Star Tracker":
+                        star_tracker_index = feature.get("index")
+                return radio_astronomy_index, rotator_index, star_tracker_index
             else:
                 print(f"Error opening device settings: {response.status_code}")
-                return None, None
+                return None, None, None
         except Exception as e:
             print(f"Error opening device settings: {e}")
-            return None, None
+            return None, None, None
 
-    def generate_coordinates(self, size, precision):
+    def generate_coordinates(self, size, precision): # From leetcode implementation
+        '''
+        Method to generate coordinates of Elevation and Azimuth offsets in a spiral matrix traversal pattern, beginning at (0,0)
+        in the center where offsets are null. Continues in a counter-clockwise traversal, with a grid spacing defined by the precision
+        and a size defined by the number of points in the raster scan. 
+
+        Inspiration for the spiral traversal obtained from leetcode implementation
+
+        # FIXME: Cite leetcode and continue with explanation
+        '''
         pres_num = 10**(-1*precision)
-
+ 
         coordinates = []
-        for x in range(-size // 2 + pres_num, size // 2 + pres_num):
-            for y in range(-size // 2 + pres_num, size // 2 + pres_num):
+        x = 0.0
+        y = 0.0
+        coordinates.append([x, y]) 
+
+        t = 1 #current side length
+
+        directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        dir_idx = 0 # Cue for time to change directions
+
+        while len(coordinates) < size**2: # Square shaped grid
+            dx, dy = directions[dir_idx % 4] 
+
+            for z in range(0, t):
+                x = x + (pres_num*dx)
+                y = y + (pres_num*dy)
                 coordinates.append([x, y])
+                if len(coordinates) == size**2: 
+                    break
+            
+            dir_idx += 1
+            if(dir_idx % 2) == 0: # Every other increase change directions
+                t += 1
+            
         return coordinates
 
     def current_coordinates(self):
+        '''
+        Method which connects to the rotator through network IP connection and recieved the current position that it is pointed
+        This information is not available through REST API, although it is shown on the screen of SDRAngel in the Rotator Controller
+        interface. It is less ideal to have to communicate with the rotator or excomctld-ts.py shim directly, thus there may be improvements.
+        
+        This information is vital to force the rotator to wait until it is in the correctly commanded location, including programmed offsets, 
+        for it to move onto the next scan location. Since the telescope takes non-negligible amount of time to move into position, 
+        it must be ensured to have reached the correct location.
+        '''
+
         try:
             # create socket and connect to the server
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -93,7 +166,30 @@ class RotatorController:
             print(f"Error: {e}")
             return None, None
         
+    def get_star_tracker_coordinates(self, url):
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                azStar = data['StarTrackerSettings']['azimuth']
+                elStar = data['StarTrackerSettings']['elevation']
+                return azStar, elStar
+            else:
+                print(f"Error getting star tracker coordinates: {response.status_code}")
+                return None, None
+                    
+        except Exception as e:
+            print(f"Error in getting star tracker coordinates: {e}")
+            return None, None
+        
     def get_rotator_settings(self, url):
+        '''
+        Method to obtain commanded position of the rotator from REST API, which will be compared to the current position 
+        obtained from self.current_coordinates()
+
+        In addition, the settings and data must be returned in order to allow for augmentation of the json payload to change the
+        offsets through REST API
+        '''
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
@@ -110,7 +206,12 @@ class RotatorController:
         
     def calculate_integration_time(self, url):
         '''
-        
+        Method to calculate the integration time, since not directly avaiable through REST API. It is defined as the number
+        of channels mulptiplied by the FFT value and divided by the sample rate. All of these variables are available through the 
+        REST API, as seen below. 
+
+        The integration time is used to force the code to wait a certain amount of time before checking if the rotator is correctly
+        on target. It checks in between each scan and continues until it is on target, completing one more scan. 
         '''
         try:
             response = requests.get(url)
@@ -131,7 +232,8 @@ class RotatorController:
     
     def update_offsets(self, azOff_new, elOff_new, settings, data, url):
         '''
-        
+        Method to update the offsets by completing a patch request to the Rotator Controller through REST API. All settings remain
+        the same, other than th elevation offset and azimuth offset. 
         '''
         settings["azimuthOffset"] = azOff_new
         settings["elevationOffset"] = elOff_new
@@ -153,7 +255,9 @@ class RotatorController:
             print(f"Exception while updating offsets: {e}")
 
     def set_precision(self, precision, url):
-        # do ta thing
+        '''
+        Method to patch the user-defined precision value to the Rotator Controller through REST API. 
+        '''
         settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(url)
         settings["precision"] = precision
 
@@ -173,16 +277,20 @@ class RotatorController:
 
     def start_raster(self, grid_size, precision):
         '''
-        
+        Method to begin the raster scan and call all of the other methods. Beigns by generating the necessary URL's to connect to 
+        REST API, generating the offset scanning coordinates, patching the precision to SDRAngel, and calculating the integration time. 
+
+        Continues to start a scan through the Radio Astronomy plugin, and begin a loop through all of the offset coordinate pairs. It compares
+        the current and commanded positions of the rotator and remains commanded to the same position and offsets until they are within a certain
+        acceptable margin (??). Once it has reached target, the code waits the total integration time for the final scan of that position, and
+        proceeds to the next commanded offset. 
+
+        # FIXME: precision of 1 is not enough for the taregt and current position
         '''
-        rotator_settings_url, astronomy_settings_url, astronomy_action_url = self.get_urls()
+        rotator_settings_url, astronomy_settings_url, astronomy_action_url, star_tracker_url = self.get_urls()
         coordinates = self.generate_coordinates(grid_size, precision)
         self.set_precision(precision, rotator_settings_url)
         integration_time = self.calculate_integration_time(astronomy_settings_url)
-        if integration_time is None:
-            print("Failed to calculate integration time.")
-            return
-        
         payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
         try: 
             response = requests.post(astronomy_action_url, json = payload)
@@ -196,7 +304,12 @@ class RotatorController:
             correct_coordinates = False
             while not correct_coordinates:
                 settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(rotator_settings_url)
-                azRot, elRot = self.current_coordinates()
+                
+                if self.rotator_connection:
+                    azRot, elRot = self.current_coordinates()
+                else:
+                    azRot, elRot = self.get_star_tracker_coordinates(star_tracker_url)
+
 
                 if azRot is not None and elRot is not None:
                     print(f"Current Coordinates: Azimuth: {azRot}, Elevation: {elRot}")
@@ -212,9 +325,9 @@ class RotatorController:
 
 if __name__ == "__main__":
 
-    rotator = RotatorController(host, port, rotator_host, rotator_port)
-    #grid_size = 5 
-    rotator.start_raster(grid_size)
+    rotator = RotatorController(host, port, rotator_host, rotator_port, rotator_connection)
+
+    rotator.start_raster(grid_size, precision, rotator_connection)
             
 
 

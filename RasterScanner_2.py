@@ -187,3 +187,53 @@ if __name__ == "__main__":
     
     grid_size = 5 
     rotator.start_raster(grid_size)
+
+    def get_star_tracker_coordinates(self, url):
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                azStar = data['StarTrackerSettings']['azimuth']
+                elStar = data['StarTrackerSettings']['elevation']
+                return azStar, elStar
+            else:
+                print(f"Error getting star tracker coordinates: {response.status_code}")
+                return None, None
+                    
+        except Exception as e:
+            print(f"Error in getting star tracker coordinates: {e}")
+            return None, None
+        
+    def start_raster(self, grid_size):
+        rotator_settings_url, astronomy_settings_url, astronomy_action_url, star_tracker_url = self.get_urls()
+        coordinates = self.generate_coordinates(grid_size)
+        integration_time = self.calculate_integration_time(astronomy_settings_url)
+        if integration_time is None:
+            print("Failed to calculate integration time.")
+            return
+        payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
+        try: 
+            response = requests.post(astronomy_action_url, json = payload)
+            if response.status_code != 202:
+                print(f"Error starting Radio Astronomy scan: {response.status_code}")
+        except Exception as e:
+            print(f"Exception while starting Radio Astronomy scan: {e}")
+
+        # Looping through all the coordinates in the grid
+        for coord in coordinates:
+            correct_coordinates = False
+            while not correct_coordinates:
+                settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(rotator_settings_url)
+                azStar, elStar = self.get_star_tracker_coordinates(star_tracker_url)
+
+                if azStar is not None and elStar is not None:
+                    print(f"Current Coordinates from StarTracker: Azimuth: {azStar}, Elevation: {elStar}")
+                    if ((abs((azStar - azOff - azTarget)) < 5) and
+                        (abs((elStar - elOff - elTarget)) < 5)):
+                        correct_coordinates = True
+                    else:
+                        print("Waiting for the rotator to reach the target coordinates...")
+                        time.sleep(integration_time)
+
+            self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
+            time.sleep(integration_time)
