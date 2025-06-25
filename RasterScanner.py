@@ -27,6 +27,7 @@ grid_size = 3
 precision = 0
 rotator_connection = True
 tolerance = 0.1
+spacing = 0.1
 
 class RotatorController:
 
@@ -100,7 +101,7 @@ class RotatorController:
             print(f"Error opening device settings: {e}")
             return None, None
 
-    def generate_offsets_grid(self, size, precision): # From leetcode implementation
+    def generate_offsets_grid(self, size, precision, spacing): # From leetcode implementation
         '''
         Method to generate coordinates of Elevation and Azimuth offsets in a spiral matrix traversal pattern, beginning at (0,0)
         in the center where offsets are null. Continues in a counter-clockwise traversal, with a grid spacing defined by the precision
@@ -126,8 +127,8 @@ class RotatorController:
             dx, dy = directions[dir_idx % 4] 
 
             for z in range(0, t):
-                x = x + (pres_num*dx)
-                y = y + (pres_num*dy)
+                x = x + (spacing*dx)
+                y = y + (spacing*dy)
                 coordinates.append([x, y])
                 if len(coordinates) == size**2: 
                     break
@@ -251,7 +252,7 @@ class RotatorController:
         except Exception as e:
             print(f"Exception while setting precision and tolerance: {e}")
 
-    def start_raster(self, grid_size, precision, tolerance):
+    def start_raster(self, grid_size, precision, tolerance, spacing):
         '''
         Method to begin the raster scan and call all of the other methods. Beigns by generating the necessary URL's to connect to 
         REST API, generating the offset scanning coordinates, patching the precision to SDRAngel, and calculating the integration time. 
@@ -264,7 +265,7 @@ class RotatorController:
         # FIXME: precision of 1 is not enough for the taregt and current position
         '''
         rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
-        coordinates = self.generate_offsets_grid(grid_size, precision)
+        coordinates = self.generate_offsets_grid(grid_size, precision, spacing)
         self.set_precision(precision, tolerance, rotator_settings_url)
         integration_time = self.calculate_integration_time(astronomy_settings_url)
         payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
@@ -279,16 +280,24 @@ class RotatorController:
         for coord in coordinates:
             correct_coordinates = False
             while not correct_coordinates:
-                settings, data, _, _, azOff, elOff = self.get_rotator_settings(rotator_settings_url)
+                settings, data, _, _, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
                 
-                currentAz, currentEl, targetAz, targetEl = self.get_coordinates(rotator_report_url)
+                azOff = round(azOff_raw, precision)
+                elOff = round(elOff_raw, precision)
 
+                currentAz_raw, currentEl_raw, targetAz_raw, targetEl_raw = self.get_coordinates(rotator_report_url)
+                
+                currentAz = round(currentAz_raw,precision)
+                currentEl = round(currentEl_raw,precision)
+                targetAz = round(targetAz_raw,precision)
+                targetEl = round(targetEl_raw,precision)
+                
                 print(f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}")
                 print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
                 print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
                 
-                if ((abs((targetAz - currentAz) - azOff) < tolerance) and
-                    (abs((targetEl - currentEl) - elOff) < tolerance)):
+                if ((abs((targetAz - currentAz) - azOff) <= tolerance) and
+                    (abs((targetEl - currentEl) - elOff) <= tolerance)):
                     correct_coordinates = True
                 else:
                     print("Waiting for the rotator to reach the target coordinates...")
@@ -297,11 +306,15 @@ class RotatorController:
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
             time.sleep(integration_time)
 
+        print("Scan is complete")
+        self.update_offsets(0, 0, settings, data, rotator_settings_url)
+
+
 if __name__ == "__main__":
 
     rotator = RotatorController(host, port, rotator_host, rotator_port)
 
-    rotator.start_raster(grid_size, precision, tolerance)
+    rotator.start_raster(grid_size, precision, tolerance, spacing)
             
 
 
