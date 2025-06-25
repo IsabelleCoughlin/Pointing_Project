@@ -14,6 +14,7 @@ import requests
 import json
 import time
 import socket
+import threading
 
 '''
 Local variables defined but also overwritten by GUI user input
@@ -21,8 +22,6 @@ Local variables defined but also overwritten by GUI user input
 
 host = "204.84.22.107"  
 port = 8091
-rotator_host = 'localhost'
-rotator_port = 4533
 grid_size = 3
 precision = 0
 rotator_connection = True
@@ -32,16 +31,15 @@ spacing = 0.1
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, host, port, rotator_host, rotator_port):#, radio_astronomy_index, rotator_index):
+    def __init__(self, host, port):
         '''
         Method to initialize an instance of the RotatorController class with pre-requisite info to connect to the 
         machine running SDRangel and access the REST API information.
 
         '''
+        self.cancel_scan = False
         self.host = host
         self.port = port
-        self.rotator_host = rotator_host
-        self.rotator_port = rotator_port
         self.base_url = f"http://{host}:{port}"
     
     def get_urls(self):
@@ -258,12 +256,13 @@ class RotatorController:
         REST API, generating the offset scanning coordinates, patching the precision to SDRAngel, and calculating the integration time. 
 
         Continues to start a scan through the Radio Astronomy plugin, and begin a loop through all of the offset coordinate pairs. It compares
-        the current and commanded positions of the rotator and remains commanded to the same position and offsets until they are within a certain
-        acceptable margin (??). Once it has reached target, the code waits the total integration time for the final scan of that position, and
+        the current and commanded positions of the rotator and remains commanded to the same position and offsets until they are 
+        at or below the tolerace given. Once it has reached target, the code waits the total integration time for the final scan of that position, and
         proceeds to the next commanded offset. 
 
         # FIXME: precision of 1 is not enough for the taregt and current position
         '''
+        self.cancel_scan = False
         rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
         coordinates = self.generate_offsets_grid(grid_size, precision, spacing)
         self.set_precision(precision, tolerance, rotator_settings_url)
@@ -278,6 +277,10 @@ class RotatorController:
         
         # Looping through all the coordinates in the grid
         for coord in coordinates:
+            if self.cancel_scan:
+                print("Scan Cancelled")
+                break
+
             correct_coordinates = False
             while not correct_coordinates:
                 settings, data, _, _, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
@@ -309,10 +312,18 @@ class RotatorController:
         print("Scan is complete")
         self.update_offsets(0, 0, settings, data, rotator_settings_url)
 
+    def start_scan_thread(self, grid_size, precision, tolerance, spacing):
+        self.cancel_scan = False
+        thread = threading.Thread(target = self.start_raster, args = (grid_size, precision, tolerance, spacing))
+        thread.start()
+        
+    def cancel_scan_request(self):
+        self.cancel_scan = True
+
 
 if __name__ == "__main__":
 
-    rotator = RotatorController(host, port, rotator_host, rotator_port)
+    rotator = RotatorController(host, port)
 
     rotator.start_raster(grid_size, precision, tolerance, spacing)
             

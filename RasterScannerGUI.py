@@ -42,20 +42,6 @@ class RotatorGUI:
         self.SDRangel_port_entry.pack()
         self.SDRangel_port_entry.insert(0, "8091")  # Default value
 
-        self.rotator_host_label = tk.Label(root, text="Host of Rotator:")
-        self.rotator_host_label.pack()
-
-        self.rotator_host_entry = tk.Entry(root)
-        self.rotator_host_entry.pack()
-        self.rotator_host_entry.insert(0, "localhost")  # Default value
-
-        self.rotator_port_label = tk.Label(root, text="Port of Rotator:")
-        self.rotator_port_label.pack()
-
-        self.rotator_port_entry = tk.Entry(root)
-        self.rotator_port_entry.pack()
-        self.rotator_port_entry.insert(0, "4533")  # Default value
-
         self.precision_label = tk.Label(root, text="Precision (how many after decimal):")
         self.precision_label.pack()
 
@@ -83,6 +69,9 @@ class RotatorGUI:
         self.status_label = tk.Label(root, text="Status: Idle")
         self.status_label.pack()
 
+        self.cancel_button = tk.Button(root, text = "Cancel Scan", command = self.cancel_scan)
+        self.cancel_button.pack()
+
     def start_scan(self):
         """
         Start the scan process from RasterScanner.py when the button is clicked.
@@ -92,16 +81,18 @@ class RotatorGUI:
         grid_size = int(self.grid_entry.get())
         host = self.SDRangel_host_entry.get()
         port = int(self.SDRangel_port_entry.get())
-        rotator_host = self.rotator_host_entry.get()
-        rotator_port = int(self.rotator_port_entry.get())
         precision = int(self.precision_entry.get())
         tolerance = float(self.tol_entry.get())
         spacing = float(self.grid_spacing_entry.get())
     
-        self.controller = RotatorController(host, port, rotator_host, rotator_port) 
+        self.controller = RotatorController(host, port) 
         self.status_label.config(text="Status: Scanning...")
-        self.controller.start_raster(grid_size, precision, tolerance, spacing)
+        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing)
+        #self.controller.start_raster(grid_size, precision, tolerance, spacing)
         self.status_label.config(text="Status: Scan Complete")
+
+    def cancel_scan(self):
+        self.controller.cancel_scan_request()
 
     def build_header(self):
         header_frame = tk.Frame(self.root, bg="#f0f0f0")
