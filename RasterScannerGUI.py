@@ -63,6 +63,13 @@ class RotatorGUI:
         self.precision_entry.pack()
         self.precision_entry.insert(0, "2")  # Default value
 
+        self.grid_spacing_label = tk.Label(root, text="Grid Spacing:")
+        self.grid_spacing_label.pack()
+
+        self.grid_spacing_entry = tk.Entry(root)
+        self.grid_spacing_entry.pack()
+        self.grid_spacing_entry.insert(0, "0.1")  # Default value
+
         self.tol_label = tk.Label(root, text="Tolerance:")
         self.tol_label.pack()
 
@@ -88,11 +95,12 @@ class RotatorGUI:
         rotator_host = self.rotator_host_entry.get()
         rotator_port = int(self.rotator_port_entry.get())
         precision = int(self.precision_entry.get())
-        tolerance = self.tol_entry.get()
+        tolerance = float(self.tol_entry.get())
+        spacing = float(self.grid_spacing_entry.get())
     
         self.controller = RotatorController(host, port, rotator_host, rotator_port) 
         self.status_label.config(text="Status: Scanning...")
-        self.controller.start_raster(grid_size, precision, tolerance)
+        self.controller.start_raster(grid_size, precision, tolerance, spacing)
         self.status_label.config(text="Status: Scan Complete")
 
     def build_header(self):
