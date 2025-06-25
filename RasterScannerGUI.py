@@ -88,7 +88,7 @@ class RotatorGUI:
         rotator_host = self.rotator_host_entry.get()
         rotator_port = int(self.rotator_port_entry.get())
         precision = int(self.precision_entry.get())
-        tolerance = int(self.tol_entry.get())
+        tolerance = self.tol_entry.get()
     
         self.controller = RotatorController(host, port, rotator_host, rotator_port) 
         self.status_label.config(text="Status: Scanning...")
