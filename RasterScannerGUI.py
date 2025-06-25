@@ -77,6 +77,7 @@ class RotatorGUI:
         Start the scan process from RasterScanner.py when the button is clicked.
         """
 
+
         # FIXME: Add exceptions if these values aren't good
         grid_size = int(self.grid_entry.get())
         host = self.SDRangel_host_entry.get()

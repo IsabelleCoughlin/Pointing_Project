@@ -312,7 +312,7 @@ class RotatorController:
         print("Scan is complete")
         self.update_offsets(0, 0, settings, data, rotator_settings_url)
 
-    def start_scan_thread(self, grid_size, precision, tolerance, spacing):
+    def start_scan_thread(self, grid_size, precision, tolerance, spacing, on_complete = None):
         self.cancel_scan = False
         def run_scan():
             self.start_raster(grid_size, precision, tolerance, spacing)
@@ -323,7 +323,7 @@ class RotatorController:
 
     def cancel_scan_request(self):
         self.cancel_scan = True
-
+# Making another change
 
 if __name__ == "__main__":
 
