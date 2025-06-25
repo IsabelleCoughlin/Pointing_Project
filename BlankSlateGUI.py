@@ -10,7 +10,7 @@ import json
 IP_ADDRESS = "204.84.22.107" # IP Address of the SDRangel server on Bella's Raspeberry Pi
 host = "204.84.22.107"  
 port = 8091
-rotator_host = 'localhost'
+rotator_host = "204.84.22.41"
 rotator_port = 4533
 display_name = "RTL-SDR[0] 00000001"
 
@@ -24,8 +24,6 @@ class BlankSlateGUI:
         self.master.geometry("700x700")
         self.master.configure(bg="#f0f0f0")
 
-        # Instance variables for the state
-        self.selected_frequency = None
 
         # Build the GUI
         self.build_header()
@@ -35,16 +33,21 @@ class BlankSlateGUI:
 
         self.controller = BlankSlate(host, port, rotator_host, rotator_port)
         self.build_device()
-        self.build_radio_astronomy()
-        #self.build_star_tracker()
-        #self.build_rotator_controller()
 
+        
 
         #self.build_frequency_section()
         #self.build_channel_section()
         #self.build_feature_section()
         #self.build_result_section()
         #self.build_action_button()
+
+    #def initialize_device_and_continue(self):
+        
+
+        
+
+        
 
     def build_header(self):
         header_frame = tk.Frame(self.master, bg="#f0f0f0")
@@ -97,11 +100,19 @@ class BlankSlateGUI:
         selected_device_index = self.devind_entry.get()
         self.controller.add_device(selected_device_name, selected_device_index)
 
+        self.build_radio_astronomy()
+        self.build_star_tracker()
+        self.build_rotator_controller()
+
+
     def build_radio_astronomy(self):
         self.controller.add_radio_astronomy()
 
     def build_star_tracker(self):
         self.controller.add_star_tracker()
+    
+    def build_rotator_controller(self):
+        self.controller.add_rotator_controller()
 
 # ==== Run App ====
 if __name__ == "__main__":

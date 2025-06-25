@@ -6,9 +6,9 @@ import socket
 
 
 # USER-INPUT
-host = "204.84.22.107"  
+host = "204.84.22.107"
 port = 8091
-rotator_host = 'localhost'
+rotator_host = "204.84.22.41"
 rotator_port = 4533
 display_name = "RTL-SDR[0] 00000001"
 
@@ -45,21 +45,21 @@ class BlankSlate:
     def add_device(self, display_name, index):
         url = f"{self.base_url}/sdrangel/devices?direction=0"
         response = requests.get(url)
-        print(response.status_code)
+        #print(response.status_code)
         data = response.json()
         result = next((device for device in data["devices"] if device["displayedName"] == display_name), None)
 
         url_1 = f"{self.base_url}/sdrangel/deviceset?direction=0"
         yay = requests.post(url_1)
-        print(yay.status_code)
+        #print(yay.status_code)
         url_2 = f"{self.base_url}/sdrangel/deviceset/{index}/device"
         too = requests.put(url_2, json = result)
-        print(too.status_code)
+        #print(too.status_code)
 
     def return_names(self):
         url = f"{self.base_url}/sdrangel/devices?direction=0"
         response = requests.get(url)
-        print(response.status_code)
+        #print(response.status_code)
         data = response.json()
         names = [item["displayedName"] for item in data.get("devices", [])]
         return names
@@ -129,9 +129,10 @@ class BlankSlate:
         
 
     def add_star_tracker(self):
-        url = f"{self.base_url}/sdrangel/featureset/feature"
+        url_1 = f"{self.base_url}/sdrangel/featureset/feature"
+        url_2 = f"{self.base_url}/sdrangel/featureset/feature/0/settings"
 
-        payload = {
+        payload_2 = {
                 "featureType": "StarTracker",
                 "originatorFeatureSetIndex": 0,
                 "originatorFeatureIndex": 0,
@@ -164,9 +165,9 @@ class BlankSlate:
                     "drawStarOnMap": 1,
                     "title": "Star Tracker",
                     "rgbColor": -16776961,
-                    "useReverseAPI": 0,
-                    "reverseAPIAddress": "127.0.0.1",
-                    "reverseAPIPort": 8888,
+                    "useReverseAPI": 1,
+                    "reverseAPIAddress": self.rotator_host,
+                    "reverseAPIPort": self.port,
                     "reverseAPIFeatureSetIndex": 0,
                     "reverseAPIFeatureIndex": 0,
                     "rollupState": {
@@ -180,14 +181,80 @@ class BlankSlate:
                     }
                 }
             }
-        requests.post(url, json = payload)
+        
+        #requests.post(url_1, json = payload)
+        requests.post(url_1, json = payload_2)
+        requests.put(url_2, json= payload_2)
+        
 
 
 
+    def add_rotator_controller(self):
+        set_url = f"{self.base_url}/sdrangel/featureset/feature"
+        put_url = f"http://204.84.22.107:8091/sdrangel/featureset/feature/1/settings"
+
+
+        payload = {
+            "featureType": "Rotator Controller",
+            "originatorFeatureSetIndex": 0,
+            "originatorFeatureIndex": 0,
+            "GS232ControllerSettings": {
+                "azimuth": 0.0,
+                "azimuthMax": 450,
+                "azimuthMin": 0,
+                "azimuthOffset": 0,
+                "baudRate": 9600,
+                "coordinates": 0,
+                "elevation": 0.0,
+                "elevationMax": 180,
+                "elevationMin": 0,
+                "elevationOffset": 0,
+                "host": self.rotator_host,
+                "inputController": "None",
+                "inputSensitivity": 5,
+                "port": self.rotator_port,
+                "precision": 2,
+                "protocol": 2,
+                "reverseAPIAddress": self.rotator_host,
+                "reverseAPIFeatureIndex": 0,
+                "reverseAPIFeatureSetIndex": 0,
+                "reverseAPIPort": self.port,
+                "rgbColor": -2025117,
+                "rollupState": {
+                "childrenStates": [
+                    {
+                    "isHidden": 0,
+                    "objectName": "controlsContainer"
+                    },
+                    {
+                    "isHidden": 0,
+                    "objectName": "settingsContainer"
+                    }
+                ],
+                "version": 0
+                },
+                "serialPort": "ttyAMA10",
+                "source": "F:0 StarTracker",
+                "title": "Rotator Controller",
+                "tolerance": 0.009999999776482582,
+                "track": 1,
+                "useReverseAPI": 1
+            },
+            "featureType": "GS232Controller"
+        }
+
+        requests.post(set_url, json = payload)
+        requests.put(put_url, json = payload)
+        
+        # Does not correctly set up the feature
+
+
+        
 
 if __name__ == "__main__":
     b = BlankSlate(host, port, rotator_host, rotator_port)
     b.add_device(display_name, 0) # index of device you would like to add
     b.add_radio_astronomy()
     b.add_star_tracker()
+    b.add_rotator_controller()
     
