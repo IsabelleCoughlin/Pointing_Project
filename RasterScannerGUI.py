@@ -87,12 +87,15 @@ class RotatorGUI:
     
         self.controller = RotatorController(host, port) 
         self.status_label.config(text="Status: Scanning...")
-        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing)
+        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, on_complete = self.on_scan_complete)
         #self.controller.start_raster(grid_size, precision, tolerance, spacing)
         self.status_label.config(text="Status: Scan Complete")
 
     def cancel_scan(self):
         self.controller.cancel_scan_request()
+
+    def on_scan_complete(self):
+        self.status_label.config(text="Status: Scan Complete")
 
     def build_header(self):
         header_frame = tk.Frame(self.root, bg="#f0f0f0")

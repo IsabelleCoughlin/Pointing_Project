@@ -314,9 +314,13 @@ class RotatorController:
 
     def start_scan_thread(self, grid_size, precision, tolerance, spacing):
         self.cancel_scan = False
-        thread = threading.Thread(target = self.start_raster, args = (grid_size, precision, tolerance, spacing))
+        def run_scan():
+            self.start_raster(grid_size, precision, tolerance, spacing)
+            if on_complete:
+                on_complete()
+        thread = threading.Thread(target = run_scan)
         thread.start()
-        
+
     def cancel_scan_request(self):
         self.cancel_scan = True
 
