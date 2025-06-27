@@ -297,10 +297,9 @@ class RotatorController:
                 currentEl = round(currentEl_raw,precision)
                 targetAz = round(targetAz_raw,precision)
                 targetEl = round(targetEl_raw,precision)
-
                 #comment
 
-
+                
                 print(f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}")
                 print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
                 print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
