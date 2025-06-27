@@ -286,19 +286,18 @@ class RotatorController:
 
                 if self.cancel_scan:
                     break
-                settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
+                settings, data, _, _, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
                 
                 azOff = round(azOff_raw, precision)
                 elOff = round(elOff_raw, precision)
 
-                currentAz_raw, currentEl_raw, targetAz_raw_1, targetEl_raw_1 = self.get_coordinates(rotator_report_url)
+                currentAz_raw, currentEl_raw, targetAz_raw, targetEl_raw = self.get_coordinates(rotator_report_url)
                 
                 currentAz = round(currentAz_raw,precision)
                 currentEl = round(currentEl_raw,precision)
                 targetAz = round(targetAz_raw,precision)
                 targetEl = round(targetEl_raw,precision)
-
-
+                
                 print(f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}")
                 print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
                 print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
