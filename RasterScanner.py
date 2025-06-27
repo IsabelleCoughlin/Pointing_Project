@@ -20,7 +20,7 @@ import threading
 Local variables defined but also overwritten by GUI user input
 '''
 
-host = "204.84.22.107"  
+host = "10.1.119.129"  
 port = 8091
 grid_size = 3
 precision = 0
@@ -298,13 +298,15 @@ class RotatorController:
                 targetAz = round(targetAz_raw,precision)
                 targetEl = round(targetEl_raw,precision)
 
+                #comment
+
 
                 print(f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}")
                 print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
                 print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
                 
-                if ((abs((targetAz - currentAz) - azOff) <= tolerance) and
-                    (abs((targetEl - currentEl) - elOff) <= tolerance)):
+                if ((abs((currentAz_raw - targetAz_raw) - azOff_raw) <= tolerance) and
+                    (abs((currentEl_raw - targetEl_raw) - elOff_raw) <= tolerance)):
                     correct_coordinates = True
                 else:
                     print("Waiting for the rotator to reach the target coordinates...")
