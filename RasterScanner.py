@@ -286,12 +286,12 @@ class RotatorController:
 
                 if self.cancel_scan:
                     break
-                settings, data, _, _, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
+                settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
                 
                 azOff = round(azOff_raw, precision)
                 elOff = round(elOff_raw, precision)
 
-                currentAz_raw, currentEl_raw, targetAz_raw, targetEl_raw = self.get_coordinates(rotator_report_url)
+                currentAz_raw, currentEl_raw, targetAz_raw_1, targetEl_raw_1 = self.get_coordinates(rotator_report_url)
                 
                 currentAz = round(currentAz_raw,precision)
                 currentEl = round(currentEl_raw,precision)
@@ -302,8 +302,8 @@ class RotatorController:
                 print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
                 print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
                 
-                if ((abs((targetAz - currentAz) - azOff) <= tolerance) and
-                    (abs((targetEl - currentEl) - elOff) <= tolerance)):
+                if ((abs((currentAz_raw - targetAz_raw) - azOff_raw) <= tolerance) and
+                    (abs((currentEl_raw - targetEl_raw) - elOff_raw) <= tolerance)):
                     correct_coordinates = True
                 else:
                     print("Waiting for the rotator to reach the target coordinates...")
