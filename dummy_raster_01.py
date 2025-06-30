@@ -16,8 +16,8 @@ print(data.head())
 
 # Example of creating a 2D plot
 plt.plot(data['Time'],data['Power (dBFS)'])
-plt.xlabel('Column 1')
-plt.ylabel('Column 2')
+plt.xlabel('Time Stamp')
+plt.ylabel('Power')
 plt.title('2D Plot of Column 1 vs Column 2')
 plt.show()
 
@@ -26,7 +26,7 @@ grid_size = 7  # Define the size of the grid so it knows how big to make it
 power_values = []
 power_grid = [[None for _ in range(grid_size)] for _ in range(grid_size)]  # Create a square grid
 
-size = 7
+size = grid_size
 spacing = 1
 
 coordinates = []
@@ -58,7 +58,7 @@ coordinate_index = 0
 print(len(data))
 print(len(coordinates))
 
-center_offset = grid_size//2
+center_offset = (grid_size-1)//2
 
 # Iterate through the rows one at a time
 for index, row in data.iterrows():
@@ -71,6 +71,8 @@ for index, row in data.iterrows():
     
     el_index = coordinates[coordinate_index][0] + center_offset
     az_index = coordinates[coordinate_index][1] + center_offset
+    
+    
     power_grid[el_index][az_index] = row['Power (dBFS)']
     coordinate_index += 1
     
@@ -88,6 +90,7 @@ plt.colorbar(label='Power (dBFS)')
 plt.xlabel('Az Off (Rot)')
 plt.ylabel('El Off (Rot)')
 plt.title('2D Plot of Power Values in Grid')
-#plt.xticks(range(-center_offset, center_offset+1))
+#plt.xticks(range(-center_offset, center_offset+1)) # FIXME: make the offsets correctly
 #plt.yticks(range(-center_offset, center_offset+1))
 plt.show()
+

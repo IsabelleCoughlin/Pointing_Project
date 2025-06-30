@@ -26,7 +26,7 @@ class RotatorGUI:
         self.data_queue = queue.Queue()
 
         # GUI Elements
-        self.grid_label = tk.Label(root, text="Grid Size:", bg=color)
+        self.grid_label = tk.Label(root, text="Grid Size: Should be odd", bg=color)
         self.grid_label.pack()
 
         self.grid_entry = tk.Entry(root)

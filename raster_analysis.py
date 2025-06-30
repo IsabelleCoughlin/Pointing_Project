@@ -6,7 +6,8 @@ from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.time import Time
 
 # Load the CSV file
-file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv' 
+#file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-10x10-18-4.csv' 
+file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
 data = pd.read_csv(file_path)
 
 phi = 35.198987939763086
