@@ -85,7 +85,7 @@ class RotatorGUI:
         self.cancel_button.pack()
         self.cancel_button.pack_forget()
 
-        self.text_widget = tk.Text(root, height = 20, width = 100)
+        self.text_widget = tk.Text(root, height = 15, width = 100)
         self.text_widget.pack()
 
         self.update_gui()
