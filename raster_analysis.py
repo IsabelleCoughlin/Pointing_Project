@@ -6,36 +6,48 @@ from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.time import Time
 
 # Load the CSV file
-file_path = 'dummy_raster_01'  # Replace with your CSV file path
+file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-10x10-18-4.csv' 
 data = pd.read_csv(file_path)
 
-
-'''35.198987939763086, -82.87218481213233'''
-lat = 35.198987939763086
+phi = 35.198987939763086
 long = -82.87218481213233
 elevation = 300 # FIXME: What is the elevation exactly of the telescopes?
 
-location = EarthLocation(lat = lat*u.deg, lon = long*u.deg, height = elevation*u.m)
-#print(data.head())
+location = EarthLocation(lat = phi*u.deg, lon = long*u.deg, height = elevation*u.m)
 last_row = None
+last_rows = []
+
+#FIXME: Replace 1 to 3 when doing new scans where it will actually wait! 
+for _,row in data[:1].iterrows():
+    last_rows.append(row)
 
 my_list = []
 
 for index, row in data.iterrows():
+
+    # Break out if it is returning to (0.0, 0.0) after other offsets done
+    if (row['Az Off (Rot)'] == 0.0) and (row['El Off (Rot)'] == 0.0) and len(my_list) > 0:
+        break
+
     if last_row is not None:
-        # Compare a specific column variable from current row to last row
-        if (row['Az Off (Rot)'] != last_row['Az Off (Rot)']) or (row['El Off (Rot)'] != last_row['El Off (Rot)']):  # Replace 'your_column_name' with the actual column name
-            my_list.append(last_row)
-            #print(f"Row {index} has the same value as last row {last_row.name} in 'your_column_name'")
-        #else:
-            #print(f"Row {index} has a different value than last row {last_row.name} in 'your_column_name'")
-    
+        if (row['Az Off (Rot)'] != last_rows[-1]['Az Off (Rot)']) or (row['El Off (Rot)'] != last_rows[-1]['El Off (Rot)']):
+            row_copy = last_rows[-1].copy()
+            total_power = sum(entry["Power (dBFS)"] for entry in last_rows)
+            average_power = total_power/len(last_rows)
+            row_copy["Power (dBFS)"] = average_power
+            my_list.append(row_copy)
+    if len(last_rows) > 0:     
+        last_rows.pop(0)
+    last_rows.append(row)
     last_row = row
 
+# Attempt to convert to XY coordinates
+
 df = pd.DataFrame(my_list)#
+
 print(df.head())
 
-phi = lat
+df.to_csv('df_output.csv', index = False)
 
 df['X'] = np.nan
 df['Y'] = np.nan
@@ -71,12 +83,4 @@ for index, row in df.iterrows():
     df.loc[index, 'Y_target'] = target_Y_30.value
 
 print(df.head())
-
-
-
-
-
-#print(df.head())    
-
-
 

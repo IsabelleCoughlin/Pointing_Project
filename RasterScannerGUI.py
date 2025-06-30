@@ -6,6 +6,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from RasterScanner import RotatorController
 from tkinter import messagebox
+import queue
 
 class RotatorGUI:
 
@@ -21,6 +22,8 @@ class RotatorGUI:
         # Build the GUI header and title
         self.build_header()
         self.build_title()
+
+        self.data_queue = queue.Queue()
 
         # GUI Elements
         self.grid_label = tk.Label(root, text="Grid Size:", bg=color)
@@ -58,7 +61,7 @@ class RotatorGUI:
         self.grid_spacing_entry.pack()
         self.grid_spacing_entry.insert(0, "0.1")  # Default value
 
-        self.tol_label = tk.Label(root, text="Tolerance:",  bg=color)
+        self.tol_label = tk.Label(root, text="Tolerance (for comparison, not SDRAngel):",  bg=color)
         self.tol_label.pack()
 
         self.tol_entry = tk.Entry(root)
@@ -75,12 +78,15 @@ class RotatorGUI:
         self.cancel_button.pack()
         self.cancel_button.pack_forget()
 
+        self.text_widget = tk.Text(root, height = 20, width = 50)
+        self.text_widget.pack()
+
+        self.update_gui()
+
     def start_scan(self):
         """
         Start the scan process from RasterScanner.py when the button is clicked.
         """
-
-
         # FIXME: Add exceptions if these values aren't good
         grid_size = int(self.grid_entry.get())
         host = self.SDRangel_host_entry.get()
@@ -95,6 +101,14 @@ class RotatorGUI:
         self.status_label.config(text="Status: Scanning...")
         self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, on_complete = self.on_scan_complete)
         
+    def update_gui(self):
+        #Checking the queue for data to print about coordinates
+        while not self.data_queue.empty():
+            data = self.data_queue.get()
+            self.text_widget.insert(tk.END, data + "\n")
+            self.text_widget.see(tk.END)
+
+        self.root.after(1, self.update_gui)
 
     def cancel_scan(self):
         self.cancel_button.pack_forget()

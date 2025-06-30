@@ -15,12 +15,13 @@ import json
 import time
 import socket
 import threading
+import queue
 
 '''
 Local variables defined but also overwritten by GUI user input
 '''
 
-host = "10.1.119.129"  
+host = "204.84.22.107"  
 port = 8091
 grid_size = 3
 precision = 0
@@ -31,12 +32,13 @@ spacing = 0.1
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, host, port):
+    def __init__(self, host, port, data_queue):
         '''
         Method to initialize an instance of the RotatorController class with pre-requisite info to connect to the 
         machine running SDRangel and access the REST API information.
 
         '''
+        self.data_queue = data_queue
         self.cancel_scan = False
         self.host = host
         self.port = port
@@ -234,7 +236,6 @@ class RotatorController:
         '''
         settings, data, azTarget, elTarget, azOff, elOff = self.get_rotator_settings(url)
         settings["precision"] = precision
-        settings["tolerance"] = tolerance
 
         payload = {
             "featureType": "GS232Controller",
@@ -246,9 +247,9 @@ class RotatorController:
         try:
             response = requests.patch(url, json=payload)
             if response.status_code != 200:
-                print(f"Error setting precision and tolerance: {response.status_code}")
+                print(f"Error setting precision: {response.status_code}")
         except Exception as e:
-            print(f"Exception while setting precision and tolerance: {e}")
+            print(f"Exception while setting precision: {e}")
 
     def start_raster(self, grid_size, precision, tolerance, spacing):
         '''
@@ -260,12 +261,11 @@ class RotatorController:
         at or below the tolerace given. Once it has reached target, the code waits the total integration time for the final scan of that position, and
         proceeds to the next commanded offset. 
 
-        # FIXME: precision of 1 is not enough for the taregt and current position
         '''
         self.cancel_scan = False
         rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
         coordinates = self.generate_offsets_grid(grid_size, precision, spacing)
-        self.set_precision(precision, tolerance, rotator_settings_url)
+        self.set_precision(precision, rotator_settings_url)
         integration_time = self.calculate_integration_time(astronomy_settings_url)
         payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
         try: 
@@ -286,6 +286,7 @@ class RotatorController:
 
                 if self.cancel_scan:
                     break
+
                 settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
                 
                 azOff = round(azOff_raw, precision)
@@ -299,7 +300,8 @@ class RotatorController:
                 targetEl = round(targetEl_raw,precision)
                 #comment
 
-                
+                data = f"test!"
+                self.data_queue.put(data)
                 print(f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}")
                 print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
                 print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
@@ -312,7 +314,7 @@ class RotatorController:
                     time.sleep(integration_time)
 
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
-            time.sleep(integration_time)
+            time.sleep(integration_time*5)
 
         print("Scan is complete")
         self.update_offsets(0, 0, settings, data, rotator_settings_url)
@@ -328,11 +330,15 @@ class RotatorController:
 
     def cancel_scan_request(self):
         self.cancel_scan = True
+
+    
 # Making another change
 
 if __name__ == "__main__":
 
-    rotator = RotatorController(host, port)
+    data_queue = queue.Queue()
+
+    rotator = RotatorController(host, port, data_queue)
 
     rotator.start_raster(grid_size, precision, tolerance, spacing)
             

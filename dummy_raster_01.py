@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the CSV file
-file_name = '/Users/isabe/Downloads/dummy_raster_02'
+file_name = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-10x10-18-4.csv'
 data = pd.read_csv(file_name) 
 
 # Display the first few rows of the dataframe
@@ -21,7 +21,7 @@ plt.title('2D Plot of Column 1 vs Column 2')
 plt.show()
 
 # Initialize variables
-grid_size = 5  # Define the size of the grid so it knows how big to make it
+grid_size = 10  # Define the size of the grid so it knows how big to make it
 power_values = []
 power_grid = [[None for _ in range(grid_size)] for _ in range(grid_size)]  # Create a square grid
 
