@@ -1,5 +1,6 @@
 '''
-All of this needs to be updated since I changed the order in which the measurements were taken
+All of this needs to be updated since I changed the order in which the measurements were taken. Make it into a module that 
+can be called and automatically showed from something else!
 '''
 
 # Import libraries
@@ -7,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the CSV file
-file_name = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-10x10-18-4.csv'
+file_name = '/Users/isabe/pointing_project/Pointing_Project/df_output.csv'
 data = pd.read_csv(file_name) 
 
 # Display the first few rows of the dataframe
@@ -21,23 +22,58 @@ plt.title('2D Plot of Column 1 vs Column 2')
 plt.show()
 
 # Initialize variables
-grid_size = 10  # Define the size of the grid so it knows how big to make it
+grid_size = 7  # Define the size of the grid so it knows how big to make it
 power_values = []
 power_grid = [[None for _ in range(grid_size)] for _ in range(grid_size)]  # Create a square grid
 
+size = 7
+spacing = 1
+
+coordinates = []
+x = 0
+y = 0
+coordinates.append([x, y]) 
+
+t = 1 #current side length
+
+directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+dir_idx = 0 # Cue for time to change directions
+
+while len(coordinates) < size**2: # Square shaped grid
+    dx, dy = directions[dir_idx % 4] 
+
+    for z in range(0, t):
+        x = int(x + (spacing*dx))
+        y = int(y + (spacing*dy))
+        coordinates.append([x, y])
+        if len(coordinates) == size**2: 
+            break
+    
+    dir_idx += 1
+    if(dir_idx % 2) == 0: # Every other increase change directions
+        t += 1
+
+coordinate_index = 0
+
+print(len(data))
+print(len(coordinates))
+
+center_offset = grid_size//2
+
 # Iterate through the rows one at a time
 for index, row in data.iterrows():
+
     current_az_off = row['Az Off (Rot)']
     current_el_off = row['El Off (Rot)']
     
     # Add the power value along with Az Off and El Off
-    power_values.append((current_az_off, current_el_off, row['Power (dBFS)']))
+    power_values.append(row['Power (dBFS)'])
     
-    # Fill the grid with power values based on Az Off and El Off
-    az_index = current_az_off + (grid_size // 2)  
-    el_index = current_el_off + (grid_size // 2)  
-    if 0 <= az_index < grid_size and 0 <= el_index < grid_size:
-        power_grid[el_index][az_index] = row['Power (dBFS)']
+    el_index = coordinates[coordinate_index][0] + center_offset
+    az_index = coordinates[coordinate_index][1] + center_offset
+    power_grid[el_index][az_index] = row['Power (dBFS)']
+    coordinate_index += 1
+    
 
 print('now im printing the values')
 # Display the collected power values
@@ -52,6 +88,6 @@ plt.colorbar(label='Power (dBFS)')
 plt.xlabel('Az Off (Rot)')
 plt.ylabel('El Off (Rot)')
 plt.title('2D Plot of Power Values in Grid')
-plt.xticks(range(grid_size), [str(i - (grid_size // 2)) for i in range(grid_size)])
-plt.yticks(range(grid_size), [str(i - (grid_size // 2)) for i in range(grid_size)])
+#plt.xticks(range(-center_offset, center_offset+1))
+#plt.yticks(range(-center_offset, center_offset+1))
 plt.show()

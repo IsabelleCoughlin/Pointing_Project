@@ -6,7 +6,7 @@ from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.time import Time
 
 # Load the CSV file
-file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-10x10-18-4.csv' 
+file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv' 
 data = pd.read_csv(file_path)
 
 phi = 35.198987939763086
@@ -22,13 +22,26 @@ for _,row in data[:1].iterrows():
     last_rows.append(row)
 
 my_list = []
+'''
+for _, row in data.iterrows():
+    if (row['Az Off (Rot)'] < 0.000001):
+        row['Az Off (Rot)'] = 0
+    if (row['El Off (Rot)'] < 0.000001):
+        row['El Off (Rot)'] = 0
+
+'''
+
+data['Az Off (Rot)'] = data['Az Off (Rot)'].apply(lambda x: 0.0 if abs(x) < 1e-10 else x)
+data['El Off (Rot)'] = data['El Off (Rot)'].apply(lambda x: 0.0 if abs(x) < 1e-10 else x)
+
+#data['Az Off (Rot)'] = data['Az Off (Rot)'].round(5)
+#data['El Off (Rot)'] = data['El Off (Rot)'].round(5)
+
 
 for index, row in data.iterrows():
 
     # Break out if it is returning to (0.0, 0.0) after other offsets done
-    if (row['Az Off (Rot)'] == 0.0) and (row['El Off (Rot)'] == 0.0) and len(my_list) > 0:
-        break
-
+    
     if last_row is not None:
         if (row['Az Off (Rot)'] != last_rows[-1]['Az Off (Rot)']) or (row['El Off (Rot)'] != last_rows[-1]['El Off (Rot)']):
             row_copy = last_rows[-1].copy()
@@ -40,6 +53,8 @@ for index, row in data.iterrows():
         last_rows.pop(0)
     last_rows.append(row)
     last_row = row
+    if (row['Az Off (Rot)'] == 0.0) and (row['El Off (Rot)'] == 0.0) and len(my_list) > 0:
+        break
 
 # Attempt to convert to XY coordinates
 
