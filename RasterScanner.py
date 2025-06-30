@@ -313,8 +313,8 @@ class RotatorController:
                 self.data_queue.put(data_3)
                 
 
-                if ((abs((currentAz_raw - targetAz_raw) - azOff_raw) <= tolerance) and
-                    (abs((currentEl_raw - targetEl_raw) - elOff_raw) <= tolerance)):
+                if (abs((currentAz_raw - targetAz_raw_1) <= tolerance) and
+                    (abs((currentEl_raw - targetEl_raw_1)) <= tolerance)):
                     correct_coordinates = True
                 else:
                     data_4 = "Waiting for the rotator to reach the target coordinates..."
