@@ -321,7 +321,7 @@ class RotatorController:
                     time.sleep(integration_time)
 
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
-            time.sleep(integration_time)
+            time.sleep(integration_time*5)
 
         print("Scan is complete")
         self.update_offsets(0, 0, settings, data, rotator_settings_url)
