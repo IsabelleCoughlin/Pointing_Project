@@ -301,16 +301,25 @@ class RotatorController:
                 #comment
 
                 data = f"test!"
-                self.data_queue.put(data)
-                print(f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}")
-                print(f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}")
-                print(f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}")
                 
+
+                data_1 = f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}"
+
+                self.data_queue.put(data_1)
+
+                data_2 = f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}"
+                
+                self.data_queue.put(data_2)
+                data_3 = f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}"
+                self.data_queue.put(data_3)
+                
+
                 if ((abs((currentAz_raw - targetAz_raw) - azOff_raw) <= tolerance) and
                     (abs((currentEl_raw - targetEl_raw) - elOff_raw) <= tolerance)):
                     correct_coordinates = True
                 else:
-                    print("Waiting for the rotator to reach the target coordinates...")
+                    data = "Waiting for the rotator to reach the target coordinates..."
+                    self.data_queue.put(data)
                     time.sleep(integration_time)
 
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
