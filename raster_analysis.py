@@ -4,6 +4,7 @@ import pandas as pd
 import astropy.units as u
 from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.time import Time
+from xymount import altaz2xy, hadec2xy
 
 # Load the CSV file
 #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-10x10-18-4.csv' 
@@ -65,12 +66,23 @@ print(df.head())
 
 df.to_csv('df_output.csv', index = False)
 
+'''
 df['X'] = np.nan
 df['Y'] = np.nan
 df['X_target'] = np.nan
 df['Y_target'] = np.nan
+'''
+
+df['X_2'] = np.nan
+df['Y_2'] = np.nan
+df['X_target_2'] = np.nan
+df['Y_target_2'] = np.nan
+
+df['X_offset'] = np.nan
+df['Y_offset'] = np.nan
 
 for index, row in df.iterrows():
+
     time_utc = Time(row["UTC"])
     time = Time(time_utc, scale = 'utc', location = location)
 
@@ -93,10 +105,24 @@ for index, row in df.iterrows():
     target_Y_30 = np.arcsin(-np.sin(C)*np.cos(D))
     target_X_30 = np.arctan(np.tan(D)/np.cos(C))
 
+    x_2, y_2 = altaz2xy(row["El (Rot)"], row["Az (Rot)"])
+
+    x_t_2, y_t_2 = altaz2xy(row["El"], row["Az"])
+
+    df['X_offset'] = abs(x_2 - x_t_2)
+    df['Y_offset'] = abs(y_2 - y_t_2)
+
+
+    df.loc[index, 'X_2'] = x_2
+    df.loc[index, 'Y_2'] = y_2
+    df.loc[index, 'X_target_2'] = x_t_2
+    df.loc[index, 'Y_target_2'] = y_t_2
+    '''
     df.loc[index, 'X'] = current_X_30
     df.loc[index, 'Y'] = current_Y_30
     df.loc[index, 'X_target'] = target_X_30.value
     df.loc[index, 'Y_target'] = target_Y_30.value
+    '''
 
 print(df.head())
 
