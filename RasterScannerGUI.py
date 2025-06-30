@@ -109,6 +109,8 @@ class RotatorGUI:
         self.status_label.config(text="Status: Scanning...")
         self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, on_complete = self.on_scan_complete)
         
+    
+
     def update_gui(self):
         #Checking the queue for data to print about coordinates
         while not self.data_queue.empty():
@@ -116,7 +118,7 @@ class RotatorGUI:
             self.text_widget.insert(tk.END, data + "\n")
             self.text_widget.see(tk.END)
 
-        self.root.after(1, self.update_gui)
+        self.root.after(0.5, self.update_gui)
 
     def cancel_scan(self):
         self.cancel_button.pack_forget()

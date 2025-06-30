@@ -301,7 +301,7 @@ class RotatorController:
                 targetEl = round(targetEl_raw,precision)
                 #comment
 
-
+                self.data_queue.put("\n")
                 data_1 = f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}"
 
                 self.data_queue.put(data_1)
