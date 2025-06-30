@@ -68,6 +68,13 @@ class RotatorGUI:
         self.tol_entry.pack()
         self.tol_entry.insert(0, "0.01")  # Default value
 
+        self.scan_label = tk.Label(root, text="Number of Scans once on target:",  bg=color)
+        self.scan_label.pack()
+
+        self.scan_entry = tk.Entry(root)
+        self.scan_entry.pack()
+        self.scan_entry.insert(0, "5")  # Default value
+
         self.start_button = tk.Button(root, text="Start Scan", command=self.start_scan)
         self.start_button.pack()
 
@@ -94,12 +101,13 @@ class RotatorGUI:
         precision = int(self.precision_entry.get())
         tolerance = float(self.tol_entry.get())
         spacing = float(self.grid_spacing_entry.get())
+        scans = float(self.scan_entry.get())
     
         self.controller = RotatorController(host, port, data_queue=self.data_queue) 
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
         self.cancel_button.pack()
         self.status_label.config(text="Status: Scanning...")
-        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, on_complete = self.on_scan_complete)
+        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scan, on_complete = self.on_scan_complete)
         
     def update_gui(self):
         #Checking the queue for data to print about coordinates

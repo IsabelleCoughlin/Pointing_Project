@@ -28,6 +28,7 @@ precision = 0
 rotator_connection = True
 tolerance = 0.1
 spacing = 0.1
+scan = 5
 
 class RotatorController:
 
@@ -251,7 +252,7 @@ class RotatorController:
         except Exception as e:
             print(f"Exception while setting precision: {e}")
 
-    def start_raster(self, grid_size, precision, tolerance, spacing):
+    def start_raster(self, grid_size, precision, tolerance, spacing, scan):
         '''
         Method to begin the raster scan and call all of the other methods. Beigns by generating the necessary URL's to connect to 
         REST API, generating the offset scanning coordinates, patching the precision to SDRAngel, and calculating the integration time. 
@@ -321,15 +322,15 @@ class RotatorController:
                     time.sleep(integration_time)
 
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
-            time.sleep(integration_time*5)
+            time.sleep(integration_time*scan)
 
         print("Scan is complete")
         self.update_offsets(0, 0, settings, data, rotator_settings_url)
 
-    def start_scan_thread(self, grid_size, precision, tolerance, spacing, on_complete = None):
+    def start_scan_thread(self, grid_size, precision, tolerance, spacing, scan, on_complete = None):
         self.cancel_scan = False
         def run_scan():
-            self.start_raster(grid_size, precision, tolerance, spacing)
+            self.start_raster(grid_size, precision, tolerance, spacing, scan)
             if on_complete:
                 on_complete()
         thread = threading.Thread(target = run_scan)
@@ -347,7 +348,7 @@ if __name__ == "__main__":
 
     rotator = RotatorController(host, port, data_queue)
 
-    rotator.start_raster(grid_size, precision, tolerance, spacing)
+    rotator.start_raster(grid_size, precision, tolerance, spacing, scan)
             
 
 
