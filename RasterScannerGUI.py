@@ -128,6 +128,11 @@ class RotatorGUI:
 
     def on_scan_complete(self):
         self.status_label.config(text="Status: Scan Complete")
+        self.cancel_button.pack_forget()
+        self.start_button.pack()
+        
+
+        
 
     def build_header(self):
         header_frame = tk.Frame(self.root, bg="lightgreen")
