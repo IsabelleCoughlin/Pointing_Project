@@ -318,8 +318,8 @@ class RotatorController:
                     (abs((currentEl_raw - targetEl_raw) - elOff_raw) <= tolerance)):
                     correct_coordinates = True
                 else:
-                    data = "Waiting for the rotator to reach the target coordinates..."
-                    self.data_queue.put(data)
+                    data_4 = "Waiting for the rotator to reach the target coordinates..."
+                    self.data_queue.put(data_4)
                     time.sleep(integration_time)
 
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
