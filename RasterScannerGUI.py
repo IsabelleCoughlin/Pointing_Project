@@ -95,7 +95,7 @@ class RotatorGUI:
         tolerance = float(self.tol_entry.get())
         spacing = float(self.grid_spacing_entry.get())
     
-        self.controller = RotatorController(host, port) 
+        self.controller = RotatorController(host, port, data_queue=self.data_queue) 
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
         self.cancel_button.pack()
         self.status_label.config(text="Status: Scanning...")

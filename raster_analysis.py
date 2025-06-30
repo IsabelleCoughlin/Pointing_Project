@@ -4,7 +4,7 @@ import pandas as pd
 import astropy.units as u
 from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.time import Time
-from xymount import altaz2xy, hadec2xy
+from xymount import altaz2xy
 
 # Load the CSV file
 #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-10x10-18-4.csv' 
