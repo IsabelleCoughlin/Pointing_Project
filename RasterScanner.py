@@ -300,8 +300,6 @@ class RotatorController:
                 targetEl = round(targetEl_raw,precision)
                 #comment
 
-                data = f"test!"
-                
 
                 data_1 = f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}"
 
