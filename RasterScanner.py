@@ -230,7 +230,7 @@ class RotatorController:
         except Exception as e:
             print(f"Exception while updating offsets: {e}")
 
-    def set_precision(self, precision, tolerance, url):
+    def set_precision(self, precision, url):
         '''
         Method to patch the user-defined precision value to the Rotator Controller through REST API. 
         '''
