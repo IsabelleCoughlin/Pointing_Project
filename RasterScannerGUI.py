@@ -107,7 +107,7 @@ class RotatorGUI:
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
         self.cancel_button.pack()
         self.status_label.config(text="Status: Scanning...")
-        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scan, on_complete = self.on_scan_complete)
+        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, on_complete = self.on_scan_complete)
         
     def update_gui(self):
         #Checking the queue for data to print about coordinates

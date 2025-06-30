@@ -319,10 +319,12 @@ class RotatorController:
                 else:
                     data_4 = "Waiting for the rotator to reach the target coordinates..."
                     self.data_queue.put(data_4)
+                    
                     time.sleep(integration_time)
 
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
             time.sleep(integration_time*scan)
+            self.data_queue.put("Rotator on target, performing specified number of scans")
 
         print("Scan is complete")
         self.update_offsets(0, 0, settings, data, rotator_settings_url)
