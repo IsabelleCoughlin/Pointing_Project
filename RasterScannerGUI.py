@@ -118,7 +118,7 @@ class RotatorGUI:
             self.text_widget.insert(tk.END, data + "\n")
             self.text_widget.see(tk.END)
 
-        self.root.after(0.5, self.update_gui)
+        self.root.after(1, self.update_gui)
 
     def cancel_scan(self):
         self.cancel_button.pack_forget()
