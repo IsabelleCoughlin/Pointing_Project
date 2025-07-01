@@ -13,17 +13,18 @@ data = pd.read_csv(file_name)
 
 # Display the first few rows of the dataframe
 print(data.head())
-
+'''
 # Example of creating a 2D plot
 plt.plot(data['Time'],data['Power (dBFS)'])
 plt.xlabel('Time Stamp')
 plt.ylabel('Power')
-plt.title('2D Plot of Column 1 vs Column 2')
+plt.title('2D Plot of Power vs Time')
 plt.show()
-
+'''
 # Initialize variables
 grid_size = 7  # Define the size of the grid so it knows how big to make it
 power_values = []
+power_values_df = pd.DataFrame()
 power_grid = [[None for _ in range(grid_size)] for _ in range(grid_size)]  # Create a square grid
 
 size = grid_size
@@ -78,7 +79,7 @@ for index, row in data.iterrows():
 
 # Convert the grid for plotting
 power_values_grid = [[0 if value is None else value for value in row] for row in power_grid]
-
+'''
 # Create the 2D plot
 plt.imshow(power_values_grid, cmap='viridis', origin='upper', extent=[0, grid_size, 0, grid_size])
 plt.colorbar(label='Power (dBFS)')
@@ -88,4 +89,19 @@ plt.title('2D Plot of Power Values in Grid')
 #plt.xticks(range(-center_offset, center_offset+1)) # FIXME: make the offsets correctly
 #plt.yticks(range(-center_offset, center_offset+1))
 plt.show()
+'''
+# Find the peak position
+
+print(power_values)
+peak_power = power_values[0]
+peak_index = 0
+
+for x in range(len(power_values)):
+    if power_values[x] > peak_power:
+        peak_power = power_values[x]
+        peak_index = x
+
+
+print(peak_power)
+print(peak_index)
 
