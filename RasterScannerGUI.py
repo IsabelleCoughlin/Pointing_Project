@@ -84,7 +84,7 @@ class RotatorGUI:
         while not self.grid_queue.empty():
             data = self.grid_queue.get()
             self.text_widget.insert(tk.END, data)
-            self.text_widget.insert(tk.END, "/n")
+            self.text_widget.insert(tk.END, type(data))
 
             self.text_widget.see(tk.END)
         '''
@@ -92,11 +92,12 @@ class RotatorGUI:
             data = self.data_queue.get()
             self.text_widget.insert(tk.END, data + "\n")
             self.text_widget.see(tk.END)
-        '''
-        #while not self.grid_queue.empty():
+        
+        while not self.grid_queue.empty():
             #length = self.grid_queue.qsize()
-            #self.fill_grid_space(self.grid_queue.get())
-
+            self.fill_grid_space(self.grid_queue.get())
+            
+        '''
         self.root.after(1, self.update_gui)
 
     def cancel_scan(self):
