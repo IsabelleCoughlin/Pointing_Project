@@ -279,7 +279,7 @@ class RotatorController:
         
         # Looping through all the coordinates in the grid
         for coord in coordinates:
-            self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
+            
 
             if self.cancel_scan:
                 print("Scan Cancelled")
@@ -302,6 +302,7 @@ class RotatorController:
                 currentEl = round(currentEl_raw,precision)
                 targetAz = round(targetAz_raw,precision)
                 targetEl = round(targetEl_raw,precision)
+                self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
                 #comment
 
                 self.data_queue.put("\n")
