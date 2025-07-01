@@ -14,7 +14,6 @@ data = pd.read_csv(file_path)
 last_row = None
 last_rows = []
 
-#FIXME: Replace 1 to 3 when doing new scans where it will actually wait! 
 for _,row in data[:3].iterrows():
     last_rows.append(row)
 
@@ -59,7 +58,7 @@ df['Y_offset'] = np.nan
 
 for index, row in df.iterrows():
 
-    # Convert to XY Coordinates
+    # Convert to XY Coordinates using Lamar's xymount.py code
     x_2, y_2 = altaz2xy(row["El (Rot)"], row["Az (Rot)"])
 
     x_t_2, y_t_2 = altaz2xy(row["El"], row["Az"])

@@ -75,13 +75,8 @@ for index, row in data.iterrows():
     
     power_grid[el_index][az_index] = row['Power (dBFS)']
     coordinate_index += 1
-    
 
-print('now im printing the values')
-# Display the collected power values
-print(power_values)
-
-# Convert the grid to a format suitable for plotting
+# Convert the grid for plotting
 power_values_grid = [[0 if value is None else value for value in row] for row in power_grid]
 
 # Create the 2D plot
