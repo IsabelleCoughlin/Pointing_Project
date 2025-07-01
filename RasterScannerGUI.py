@@ -81,6 +81,7 @@ class RotatorGUI:
 
     def update_gui(self):
         #Checking the queue for data to print about coordinates
+        '''
         while not self.grid_queue.empty():
             data = self.grid_queue.get()
             self.text_widget.insert(tk.END, data)
@@ -97,7 +98,7 @@ class RotatorGUI:
             #length = self.grid_queue.qsize()
             self.fill_grid_space(self.grid_queue.get())
             
-        '''
+        
         self.root.after(1, self.update_gui)
 
     def cancel_scan(self):
@@ -123,10 +124,10 @@ class RotatorGUI:
 
     def fill_grid_space(self, coord):
 
-        center_offset = (self.grid_size - 1)//2
+        center_offset = int((self.grid_size - 1)//2)
 
-        row = coord[0] + center_offset
-        col = coord[1] - center_offset
+        row = int(int(coord[0]) + center_offset)
+        col = int(int(coord[1]) - center_offset)
 
         canvas_size = 300
         cell_size = canvas_size // self.grid_size
