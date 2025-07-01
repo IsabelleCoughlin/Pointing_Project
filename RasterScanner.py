@@ -288,11 +288,15 @@ class RotatorController:
             correct_coordinates = False
             while not correct_coordinates:
 
-                if self.cancel_scan:
-                    break
+                
 
                 settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
                 
+                if self.cancel_scan:
+                    self.update_offsets(0, 0, settings, data, rotator_settings_url)
+                    break
+
+
                 azOff = round(azOff_raw, precision)
                 elOff = round(elOff_raw, precision)
 

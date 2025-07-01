@@ -79,7 +79,7 @@ for index, row in data.iterrows():
 
 # Convert the grid for plotting
 power_values_grid = [[0 if value is None else value for value in row] for row in power_grid]
-'''
+
 # Create the 2D plot
 plt.imshow(power_values_grid, cmap='viridis', origin='upper', extent=[0, grid_size, 0, grid_size])
 plt.colorbar(label='Power (dBFS)')
@@ -89,7 +89,7 @@ plt.title('2D Plot of Power Values in Grid')
 #plt.xticks(range(-center_offset, center_offset+1)) # FIXME: make the offsets correctly
 #plt.yticks(range(-center_offset, center_offset+1))
 plt.show()
-'''
+
 # Find the peak position
 
 print(power_values)
@@ -114,11 +114,11 @@ Make a new dataframe with peak XY, center XY, offset XY
 #columns = ["Peak X", "Peak Y", "Center X", "Center Y", "Offset X", "Offset Y"]
 #xy_df = pd.DataFrame(columns = columns)
 
-#xy_df.loc[len(xy_df)] = [data.loc[peak_index,"X (Rot)"], data.loc[peak_index,"Y (Rot)"], data.loc[peak_index,"X (Target)"], data.loc[peak_index,"Y (Target)"], data.loc[peak_index,"X_offset"], data.loc[peak_index,"Y_offset"]]
+xy_df.loc[len(xy_df)] = [data.loc[peak_index,"X (Rot)"], data.loc[peak_index,"Y (Rot)"], data.loc[peak_index,"X (Target)"], data.loc[peak_index,"Y (Target)"], data.loc[peak_index,"X_offset"], data.loc[peak_index,"Y_offset"]]
 print(xy_df)
 
-xy_df.iloc[:-1]
+#xy_df.iloc[:-1]
 
 
-xy_df.to_csv('xy_df.csv', index = False)
+#xy_df.to_csv('xy_df.csv', index = False)
 

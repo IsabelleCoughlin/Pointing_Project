@@ -12,10 +12,11 @@ class RotatorGUI:
 
     def __init__(self, root):
         self.root = root
+        self.running = True
+        self.scan_active = False
         self.root.title("Raster Scan Controller")
         
         #self.root.geometry("900x900")
-        
         self.color = 'LavenderBlush3'
         #self.root.configure(bg=self.color)
 
@@ -59,7 +60,17 @@ class RotatorGUI:
         """
         Start the scan process from RasterScanner.py when the button is clicked.
         """
-        # FIXME: Add exceptions if these values aren't good
+        if self.scan_active:
+            return
+        self.scan_active = True
+        self.running = True
+        self.text_widget.delete("1.0", tk.END)  # Clear text output
+        self.data_queue.queue.clear()           # Flush leftover data
+        self.grid_queue.queue.clear()
+        self.canvas.delete("all")               # Clear canvas before redrawing
+        grid_size = int(self.grid_entry.get())
+        self.build_grid(grid_size)
+        
         grid_size = int(self.grid_entry.get())
         host = self.SDRangel_host_entry.get()
         port = int(self.SDRangel_port_entry.get())
@@ -70,6 +81,7 @@ class RotatorGUI:
 
         self.build_grid(grid_size)
         self.grid_size = grid_size
+        self.spacing = spacing
     
         self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue) 
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
@@ -81,34 +93,33 @@ class RotatorGUI:
 
     def update_gui(self):
         #Checking the queue for data to print about coordinates
-        '''
-        while not self.grid_queue.empty():
-            data = self.grid_queue.get()
-            self.text_widget.insert(tk.END, data)
-            self.text_widget.insert(tk.END, type(data))
 
-            self.text_widget.see(tk.END)
-        '''
         while not self.data_queue.empty():
             data = self.data_queue.get()
             self.text_widget.insert(tk.END, data + "\n")
             self.text_widget.see(tk.END)
-            self.fill_grid_space(self.grid_queue.get())
-        '''
-        while not self.grid_queue.empty():
-            #length = self.grid_queue.qsize()
-            self.fill_grid_space(self.grid_queue.get())
-        '''
+            
+        if self.running:
+            while not self.grid_queue.empty():
+                next_coord = self.grid_queue.get()
+                self.fill_grid_space(next_coord)
         
         self.root.after(1, self.update_gui)
 
     def cancel_scan(self):
+        self.scan_active = False
+        self.running = False
         self.cancel_button.pack_forget()
         self.start_button.pack()
         self.status_label.config(text="Status: Canceled")
         self.controller.cancel_scan_request()
 
+        self.grid_queue.queue.clear()
+        self.data_queue.queue.clear()
+
     def on_scan_complete(self):
+        self.running = False
+        self.running = False
         self.status_label.config(text="Status: Scan Complete")
         self.cancel_button.pack_forget()
         self.start_button.pack()
@@ -125,20 +136,31 @@ class RotatorGUI:
 
     def fill_grid_space(self, coord):
 
-        center_offset = int((self.grid_size - 1)//2)
+        print(f"Coordinates at: {coord[0]}, col: {coord[1]}")
 
-        row = int(int(coord[0]) + center_offset)
-        col = int(int(coord[1]) - center_offset)
+
+        if not isinstance(coord, (list, tuple)) or len(coord) != 2:
+            print("Invalid coordinate:", coord)
+            return
+
+        center_offset = ((self.grid_size - 1)//2)
+
+        col = int(coord[0]/self.spacing) + center_offset
+        row = int(coord[1]/self.spacing) + center_offset
+        invert_row = (self.grid_size - 1) - row
+        print(f"Drawing at row: {row}, col: {col}")
 
         canvas_size = 300
         cell_size = canvas_size // self.grid_size
         x1 = col * cell_size
-        y1 = row * cell_size
+        y1 = invert_row * cell_size
         x2 = x1 + cell_size
         y2 = y1 + cell_size
 
         # Draw a rectangle to fill the cell
         self.canvas.create_rectangle(x1, y1, x2, y2, fill="yellow", outline="black")
+
+
 
     def build_grid(self, grid_size):
         self.canvas.delete("all")
@@ -178,7 +200,8 @@ class RotatorGUI:
 
         self.SDRangel_host_entry = tk.Entry(entry_frame)
         self.SDRangel_host_entry.pack()
-        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+        #self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
 
         self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
         self.SDRangel_port_label.pack()
