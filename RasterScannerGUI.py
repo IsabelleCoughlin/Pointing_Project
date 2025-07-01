@@ -14,71 +14,36 @@ class RotatorGUI:
         self.root = root
         self.root.title("Raster Scan Controller")
         
-        self.root.geometry("700x900")
-        color = 'LavenderBlush3'
-        self.root.configure(bg=color)
+        #self.root.geometry("900x900")
+        
+        self.color = 'LavenderBlush3'
+        #self.root.configure(bg=self.color)
 
-
-        # Build the GUI header and title
         self.build_header()
         self.build_title()
 
+        main_frame = tk.Frame(root, bg = self.color)
+        main_frame.pack(side = "top", fill = "x", padx = 20, pady = 20)
+
+
+        # Build the GUI header and title
+        
+
         self.data_queue = queue.Queue()
+        self.grid_queue = queue.Queue()
 
         # GUI Elements
-        self.grid_label = tk.Label(root, text="Grid Size: Should be odd", bg=color)
-        self.grid_label.pack()
+        '''
+        The following should all be on the left
+        '''
 
-        self.grid_entry = tk.Entry(root)
-        self.grid_entry.pack()
-        self.grid_entry.insert(0, "5")  # Default value
-
-        self.SDRangel_host_label = tk.Label(root, text="Host of SDRangel:", bg=color)
-        self.SDRangel_host_label.pack()
-
-        self.SDRangel_host_entry = tk.Entry(root)
-        self.SDRangel_host_entry.pack()
-        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
-
-        self.SDRangel_port_label = tk.Label(root, text="Port of SDRangel:", bg=color)
-        self.SDRangel_port_label.pack()
-
-        self.SDRangel_port_entry = tk.Entry(root)
-        self.SDRangel_port_entry.pack()
-        self.SDRangel_port_entry.insert(0, "8091")  # Default value
-
-        self.precision_label = tk.Label(root, text="Precision (how many after decimal):", bg=color)
-        self.precision_label.pack()
-
-        self.precision_entry = tk.Entry(root)
-        self.precision_entry.pack()
-        self.precision_entry.insert(0, "2")  # Default value
-
-        self.grid_spacing_label = tk.Label(root, text="Grid Spacing:", bg=color)
-        self.grid_spacing_label.pack()
-
-        self.grid_spacing_entry = tk.Entry(root)
-        self.grid_spacing_entry.pack()
-        self.grid_spacing_entry.insert(0, "0.1")  # Default value
-
-        self.tol_label = tk.Label(root, text="Tolerance (for comparison, not SDRAngel):",  bg=color)
-        self.tol_label.pack()
-
-        self.tol_entry = tk.Entry(root)
-        self.tol_entry.pack()
-        self.tol_entry.insert(0, "0.01")  # Default value
-
-        self.scan_label = tk.Label(root, text="Number of Scans once on target:",  bg=color)
-        self.scan_label.pack()
-
-        self.scan_entry = tk.Entry(root)
-        self.scan_entry.pack()
-        self.scan_entry.insert(0, "5")  # Default value
+        self.build_entries(main_frame)
+        self.build_empty_grid(main_frame)
 
         self.start_button = tk.Button(root, text="Start Scan", command=self.start_scan)
         self.start_button.pack()
 
-        self.status_label = tk.Label(root, text="Status: Idle", bg=color)
+        self.status_label = tk.Label(root, text="Status: Idle", bg=self.color)
         self.status_label.pack()
 
         self.cancel_button = tk.Button(root, text = "Cancel Scan", command = self.cancel_scan)
@@ -102,8 +67,11 @@ class RotatorGUI:
         tolerance = float(self.tol_entry.get())
         spacing = float(self.grid_spacing_entry.get())
         scans = float(self.scan_entry.get())
+
+        self.build_grid(grid_size)
+        self.grid_size = grid_size
     
-        self.controller = RotatorController(host, port, data_queue=self.data_queue) 
+        self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue) 
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
         self.cancel_button.pack()
         self.status_label.config(text="Status: Scanning...")
@@ -117,6 +85,9 @@ class RotatorGUI:
             data = self.data_queue.get()
             self.text_widget.insert(tk.END, data + "\n")
             self.text_widget.see(tk.END)
+        while not self.grid_queue.empty():
+            #length = self.grid_queue.qsize()
+            self.fill_grid_space(self.grid_queue.get())
 
         self.root.after(1, self.update_gui)
 
@@ -130,25 +101,124 @@ class RotatorGUI:
         self.status_label.config(text="Status: Scan Complete")
         self.cancel_button.pack_forget()
         self.start_button.pack()
-        
 
-        
+    def build_empty_grid(self, parent):
+        self.grid_frame = tk.Frame(parent, bg = "black", relief = "solid", borderwidth = 2)
+        self.grid_frame.pack(side = "left", padx = 20, pady = 20)
+
+        self.canvas = tk.Canvas(self.grid_frame, bg = "white", width = 300, height = 300)
+        self.canvas.pack(padx = 2, pady = 2)
+        #self.inner_grid_frame = tk.Frame(self.grid_frame, bg = "white", width = 300, height = 300)
+        #self.inner_grid_frame.pack(padx = 2, pady = 2)
+
+
+    def fill_grid_space(self, coord):
+
+        center_offset = (self.grid_size - 1)//2
+
+        row = coord[0] + center_offset
+        col = coord[1] - center_offset
+
+        canvas_size = 300
+        cell_size = canvas_size // self.grid_size
+        x1 = col * cell_size
+        y1 = row * cell_size
+        x2 = x1 + cell_size
+        y2 = y1 + cell_size
+
+        # Draw a rectangle to fill the cell
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="yellow", outline="black")
+
+    def build_grid(self, grid_size):
+        self.canvas.delete("all")
+        '''
+        try:
+            grid_size = int(self.grid_entry.get())
+            if grid_size % 2 == 0 or grid_size <= 0:
+                raise ValueError("Grid size must be a positive odd number.")
+        except ValueError as e:
+            tk.messagebox.showerror("Invalid Input", str(e))
+            return
+        '''
+        canvas_size = 300
+        cell_size = canvas_size // grid_size
+        for i in range(grid_size + 1):
+            x = i*cell_size
+            self.canvas.create_line(x, 0, x, canvas_size, fill = "black")
+
+            y = i*cell_size
+            self.canvas.create_line(0, y, canvas_size, y, fill = "black")
+
+    def build_entries(self, parent):
+
+        # Create a frame
+        entry_frame = tk.Frame(parent)
+        entry_frame.pack(side = "left", anchor = "nw", padx = 20, pady = 20)
+
+        self.grid_label = tk.Label(entry_frame, text="Grid Size: Should be odd", bg=self.color)
+        self.grid_label.pack()
+
+        self.grid_entry = tk.Entry(entry_frame)
+        self.grid_entry.pack()
+        self.grid_entry.insert(0, "5")  # Default value
+
+        self.SDRangel_host_label = tk.Label(entry_frame, text="Host of SDRangel:", bg=self.color)
+        self.SDRangel_host_label.pack()
+
+        self.SDRangel_host_entry = tk.Entry(entry_frame)
+        self.SDRangel_host_entry.pack()
+        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+
+        self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
+        self.SDRangel_port_label.pack()
+
+        self.SDRangel_port_entry = tk.Entry(entry_frame)
+        self.SDRangel_port_entry.pack()
+        self.SDRangel_port_entry.insert(0, "8091")  # Default value
+
+        self.precision_label = tk.Label(entry_frame, text="Precision (how many after decimal):", bg=self.color)
+        self.precision_label.pack()
+
+        self.precision_entry = tk.Entry(entry_frame)
+        self.precision_entry.pack()
+        self.precision_entry.insert(0, "2")  # Default value
+
+        self.grid_spacing_label = tk.Label(entry_frame, text="Grid Spacing:", bg=self.color)
+        self.grid_spacing_label.pack()
+
+        self.grid_spacing_entry = tk.Entry(entry_frame)
+        self.grid_spacing_entry.pack()
+        self.grid_spacing_entry.insert(0, "0.1")  # Default value
+
+        self.tol_label = tk.Label(entry_frame, text="Tolerance (for comparison, not SDRAngel):",  bg=self.color)
+        self.tol_label.pack()
+
+        self.tol_entry = tk.Entry(entry_frame)
+        self.tol_entry.pack()
+        self.tol_entry.insert(0, "0.01")  # Default value
+
+        self.scan_label = tk.Label(entry_frame, text="Number of Scans once on target:",  bg=self.color)
+        self.scan_label.pack()
+
+        self.scan_entry = tk.Entry(entry_frame)
+        self.scan_entry.pack()
+        self.scan_entry.insert(0, "5")  # Default value
 
     def build_header(self):
         header_frame = tk.Frame(self.root, bg="lightgreen")
         header_frame.pack(pady=10)
 
-        try:
+        #try:
             #FIXME: This image path won't work on another computer but it doesn't crash just doesnt show up
-            image_path = "/Users/isabe/Pictures/maxwellcololr062.jpg"
-            img = Image.open(image_path)
-            img = img.resize((280,300), Image.Resampling.LANCZOS)
-            img_tk = ImageTk.PhotoImage(img)
-            img_label = tk.Label(header_frame, image = img_tk, bg="#f0f0f0")
-            img_label.image = img_tk
-            img_label.pack()
-        except Exception as e:
-            print("Image loading dailed:", e)
+            #image_path = "/Users/isabe/Pictures/maxwellcololr062.jpg"
+            #img = Image.open(image_path)
+            #img = img.resize((280,300), Image.Resampling.LANCZOS)
+            #img_tk = ImageTk.PhotoImage(img)
+            #img_label = tk.Label(header_frame, image = img_tk, bg="#f0f0f0")
+            #img_label.image = img_tk
+            #img_label.pack()
+        #except Exception as e:
+        #    print("Image loading dailed:", e)
 
     def build_title(self):
         title = tk.Label(self.root, text = "Raster Scan Page",

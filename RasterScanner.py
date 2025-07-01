@@ -33,13 +33,14 @@ scan = 5
 class RotatorController:
 
     # Intitialize the host, port, and necessary URL's for API interaction
-    def __init__(self, host, port, data_queue):
+    def __init__(self, host, port, data_queue, grid_queue):
         '''
         Method to initialize an instance of the RotatorController class with pre-requisite info to connect to the 
         machine running SDRangel and access the REST API information.
 
         '''
         self.data_queue = data_queue
+        self.grid_queue = grid_queue
         self.cancel_scan = False
         self.host = host
         self.port = port
@@ -278,6 +279,8 @@ class RotatorController:
         
         # Looping through all the coordinates in the grid
         for coord in coordinates:
+            self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
+
             if self.cancel_scan:
                 print("Scan Cancelled")
                 break
@@ -324,7 +327,7 @@ class RotatorController:
 
             self.data_queue.put("Rotator on target, performing specified number of scans")
             time.sleep(integration_time*scan)
-            self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
+            self.grid_queue.put(coord)
             
 
         print("Scan is complete")

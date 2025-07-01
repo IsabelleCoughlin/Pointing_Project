@@ -7,10 +7,12 @@ can be called and automatically showed from something else!
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Load the CSV file
+# Load the new CSV file
 file_name = '/Users/isabe/pointing_project/Pointing_Project/df_output.csv'
 data = pd.read_csv(file_name) 
-
+# Load the current CVS file for already done scans
+file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/xy_df.csv'
+xy_df = pd.read_csv(file_name_2)
 # Display the first few rows of the dataframe
 print(data.head())
 '''
@@ -24,7 +26,6 @@ plt.show()
 # Initialize variables
 grid_size = 7  # Define the size of the grid so it knows how big to make it
 power_values = []
-power_values_df = pd.DataFrame()
 power_grid = [[None for _ in range(grid_size)] for _ in range(grid_size)]  # Create a square grid
 
 size = grid_size
@@ -73,7 +74,6 @@ for index, row in data.iterrows():
     el_index = coordinates[coordinate_index][0] + center_offset
     az_index = coordinates[coordinate_index][1] + center_offset
     
-    
     power_grid[el_index][az_index] = row['Power (dBFS)']
     coordinate_index += 1
 
@@ -104,4 +104,21 @@ for x in range(len(power_values)):
 
 print(peak_power)
 print(peak_index)
+
+print(data.head())
+
+'''
+Make a new dataframe with peak XY, center XY, offset XY
+'''
+
+#columns = ["Peak X", "Peak Y", "Center X", "Center Y", "Offset X", "Offset Y"]
+#xy_df = pd.DataFrame(columns = columns)
+
+#xy_df.loc[len(xy_df)] = [data.loc[peak_index,"X (Rot)"], data.loc[peak_index,"Y (Rot)"], data.loc[peak_index,"X (Target)"], data.loc[peak_index,"Y (Target)"], data.loc[peak_index,"X_offset"], data.loc[peak_index,"Y_offset"]]
+print(xy_df)
+
+xy_df.iloc[:-1]
+
+
+xy_df.to_csv('xy_df.csv', index = False)
 

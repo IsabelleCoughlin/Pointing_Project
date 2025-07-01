@@ -45,7 +45,7 @@ for index, row in data.iterrows():
 df = pd.DataFrame(my_list)
 
 # Save df to use for picture analysis in another file
-df.to_csv('df_output.csv', index = False)
+
 
 # Create space to add extra information
 df['X (Rot)'] = np.nan
@@ -75,4 +75,6 @@ for index, row in df.iterrows():
     
 
 print(df.head())
+
+df.to_csv('df_output.csv', index = False)
 
