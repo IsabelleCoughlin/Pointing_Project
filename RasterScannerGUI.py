@@ -81,13 +81,13 @@ class RotatorGUI:
 
     def update_gui(self):
         #Checking the queue for data to print about coordinates
-        while not self.data_queue.empty():
-            data = self.data_queue.get()
+        while not self.grid_queue.empty():
+            data = self.grid_queue.get()
             self.text_widget.insert(tk.END, data + "\n")
             self.text_widget.see(tk.END)
-        while not self.grid_queue.empty():
+        #while not self.grid_queue.empty():
             #length = self.grid_queue.qsize()
-            self.fill_grid_space(self.grid_queue.get())
+            #self.fill_grid_space(self.grid_queue.get())
 
         self.root.after(1, self.update_gui)
 
