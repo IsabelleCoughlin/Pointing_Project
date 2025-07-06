@@ -70,6 +70,7 @@ class RotatorGUI:
         self.canvas.delete("all")               # Clear canvas before redrawing
         grid_size = int(self.grid_entry.get())
         self.build_grid(grid_size)
+        selected = self.freq_combo.get()
         
         grid_size = int(self.grid_entry.get())
         host = self.SDRangel_host_entry.get()
@@ -87,7 +88,7 @@ class RotatorGUI:
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
         self.cancel_button.pack()
         self.status_label.config(text="Status: Scanning...")
-        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, on_complete = self.on_scan_complete)
+        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, selected, on_complete = self.on_scan_complete)
         
     
 
@@ -136,17 +137,13 @@ class RotatorGUI:
 
     def fill_grid_space(self, coord):
 
-        print(f"Coordinates at: {coord[0]}, col: {coord[1]}")
+        print(f"Coordinates at: {round(coord[0], 3)}, col: {round(coord[1], 3)}")
 
-
-        if not isinstance(coord, (list, tuple)) or len(coord) != 2:
-            print("Invalid coordinate:", coord)
-            return
 
         center_offset = ((self.grid_size - 1)//2)
 
-        col = int(coord[0]/self.spacing) + center_offset
-        row = int(coord[1]/self.spacing) + center_offset
+        col = round(round(coord[0], 3)/self.spacing) + center_offset
+        row = round(round(coord[1], 3)/self.spacing) + center_offset
         invert_row = (self.grid_size - 1) - row
         print(f"Drawing at row: {row}, col: {col}")
 
@@ -200,8 +197,8 @@ class RotatorGUI:
 
         self.SDRangel_host_entry = tk.Entry(entry_frame)
         self.SDRangel_host_entry.pack()
-        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
-        #self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
+        #self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
 
         self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
         self.SDRangel_port_label.pack()
@@ -230,6 +227,17 @@ class RotatorGUI:
         self.tol_entry = tk.Entry(entry_frame)
         self.tol_entry.pack()
         self.tol_entry.insert(0, "0.01")  # Default value
+
+        
+        freq_frame = tk.Frame(parent, bg = "#f0f0f0")
+        freq_frame.pack(pady = 10)
+
+        ttk.Label(freq_frame, text = "Set Standard Frame:", font=("Helvetica", 11)).grid(row = 0, column = 0, padx = 10)
+
+        self.freq_combo = ttk.Combobox(freq_frame, width=30)
+        self.freq_combo['values'] = ('El-Az', 'HA-DEC', "X-Y")
+        self.freq_combo.grid(row=0, column=1, padx=10)
+        self.freq_combo.current()
 
         self.scan_label = tk.Label(entry_frame, text="Number of Scans once on target:",  bg=self.color)
         self.scan_label.pack()

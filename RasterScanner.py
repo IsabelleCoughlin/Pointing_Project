@@ -16,6 +16,7 @@ import time
 import socket
 import threading
 import queue
+from xymount import altaz2xy, xy2altaz, xy2hadec, hadec2xy
 
 '''
 Local variables defined but also overwritten by GUI user input
@@ -29,6 +30,7 @@ rotator_connection = True
 tolerance = 0.1
 spacing = 0.1
 scan = 5
+selected = 'El-Az'
 
 class RotatorController:
 
@@ -207,7 +209,47 @@ class RotatorController:
         except Exception as e:
             print(f"Error calculating integration time: {e}")
             return None
+        
+    def XY_offset(self, targetAz_raw, targetEl_raw, xOff, yOff, spacing):
+        x_target, y_target = altaz2xy(targetEl_raw, targetAz_raw)
+        
+        x_new = x_target + xOff
+        y_new = y_target + yOff
+
+        #alt_target, az_target = xy2altaz(x_target, y_target)
+        #alt_offset = targetEl_raw - alt_target
+        #az_offset = targetAz_raw - az_target
+        #return round(az_offset, 3)%360,  round(alt_offset, 3)%360
+        newEl, newAz = xy2altaz(x_new, y_new)
+
+    # Step 4: Calculate angular offsets from the central point
+        az_offset = (newAz - targetAz_raw) % 360
+        if az_offset > 180:  # Shortest path around the circle
+            az_offset -= 360
+
+        el_offset = newEl - targetEl_raw
+
+        return round(az_offset, 3), round(el_offset, 3)
     
+    def HA_DEC_offsets(self, targetAz_raw, targetEl_raw, HAOff, DECOff):
+        lat = -84
+        x_target, y_target = altaz2xy(targetEl_raw, targetAz_raw)
+        ha_target, dec_target = xy2hadec(x_target, y_target, lat)
+        ha_new = ha_target + HAOff
+        dec_new = dec_target + DECOff
+
+        x_new, y_new = hadec2xy(ha_new, dec_new, lat)
+        newEl, newAz = xy2altaz(x_new, y_new)
+
+        az_offset = (newAz - targetAz_raw) % 360
+        if az_offset > 180:  # Shortest path around the circle
+            az_offset -= 360
+
+        el_offset = newEl - targetEl_raw
+
+        return round(az_offset, 3), round(el_offset, 3)
+
+
     def update_offsets(self, azOff_new, elOff_new, settings, data, url):
         '''
         Method to update the offsets by completing a patch request to the Rotator Controller through REST API. All settings remain
@@ -253,7 +295,7 @@ class RotatorController:
         except Exception as e:
             print(f"Exception while setting precision: {e}")
 
-    def start_raster(self, grid_size, precision, tolerance, spacing, scan):
+    def start_raster(self, grid_size, precision, tolerance, spacing, scan, selected):
         '''
         Method to begin the raster scan and call all of the other methods. Beigns by generating the necessary URL's to connect to 
         REST API, generating the offset scanning coordinates, patching the precision to SDRAngel, and calculating the integration time. 
@@ -264,9 +306,11 @@ class RotatorController:
         proceeds to the next commanded offset. 
 
         '''
+        
         self.cancel_scan = False
         rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
         coordinates = self.generate_offsets_grid(grid_size, precision, spacing)
+        print(coordinates)
         self.set_precision(precision, rotator_settings_url)
         integration_time = self.calculate_integration_time(astronomy_settings_url)
         payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
@@ -279,11 +323,24 @@ class RotatorController:
         
         # Looping through all the coordinates in the grid
         for coord in coordinates:
-            
+            #xy = False
 
             if self.cancel_scan:
                 print("Scan Cancelled")
                 break
+
+            settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
+            
+            #if xy:
+                #print(coord[0], coord[1])
+            #    coord0, coord1 = self.HA_DEC_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
+            #    self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
+            #    print(coord0, coord1)
+            #else:    
+            self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
+
+
+                #comment
 
             correct_coordinates = False
             while not correct_coordinates:
@@ -291,6 +348,8 @@ class RotatorController:
                 
 
                 settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
+                
+                print(azOff_raw, elOff_raw)
                 
                 if self.cancel_scan:
                     self.update_offsets(0, 0, settings, data, rotator_settings_url)
@@ -306,13 +365,16 @@ class RotatorController:
                 currentEl = round(currentEl_raw,precision)
                 targetAz = round(targetAz_raw,precision)
                 targetEl = round(targetEl_raw,precision)
-                self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
-                #comment
+
+                
 
                 self.data_queue.put("\n")
-                data_1 = f"Current Offsets: Azimuth: {azOff}, Elevation: {elOff}"
+                data_1 = f"My coord Offsets: Azimuth: {coord[0]}, Elevation: {coord[1]}"
+                data_5 = f"SDRAngel Offsets: Azimuth: {azOff}, Elevation: {elOff}"
 
                 self.data_queue.put(data_1)
+                self.data_queue.put(data_5)
+
 
                 data_2 = f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}"
                 
@@ -338,10 +400,10 @@ class RotatorController:
         print("Scan is complete")
         self.update_offsets(0, 0, settings, data, rotator_settings_url)
 
-    def start_scan_thread(self, grid_size, precision, tolerance, spacing, scan, on_complete = None):
+    def start_scan_thread(self, grid_size, precision, tolerance, spacing, scan, selected, on_complete = None):
         self.cancel_scan = False
         def run_scan():
-            self.start_raster(grid_size, precision, tolerance, spacing, scan)
+            self.start_raster(grid_size, precision, tolerance, spacing, scan, selected)
             if on_complete:
                 on_complete()
         thread = threading.Thread(target = run_scan)
@@ -356,10 +418,11 @@ class RotatorController:
 if __name__ == "__main__":
 
     data_queue = queue.Queue()
+    grid_queue = queue.Queue()
 
-    rotator = RotatorController(host, port, data_queue)
+    rotator = RotatorController(host, port, data_queue, grid_queue)
 
-    rotator.start_raster(grid_size, precision, tolerance, spacing, scan)
+    rotator.start_raster(grid_size, precision, tolerance, spacing, scan, selected)
             
 
 
