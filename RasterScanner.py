@@ -306,6 +306,7 @@ class RotatorController:
         proceeds to the next commanded offset. 
 
         '''
+        #'El-Az', 'HA-DEC', "X-Y"
         
         self.cancel_scan = False
         rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
@@ -331,12 +332,18 @@ class RotatorController:
 
             settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
             
-            #if xy:
-                #print(coord[0], coord[1])
-            #    coord0, coord1 = self.HA_DEC_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
-            #    self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
-            #    print(coord0, coord1)
-            #else:    
+            
+            
+            '''
+            if selected == 'HA-DEC':
+                coord0, coord1 = self.HA_DEC_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
+                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
+            elif selected == 'X-Y':
+                coord0, coord1 = self.XY_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
+                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
+            else:
+                self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
+            '''
             self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
 
 

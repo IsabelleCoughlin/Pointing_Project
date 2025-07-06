@@ -235,7 +235,7 @@ class RotatorGUI:
         ttk.Label(freq_frame, text = "Set Standard Frame:", font=("Helvetica", 11)).grid(row = 0, column = 0, padx = 10)
 
         self.freq_combo = ttk.Combobox(freq_frame, width=30)
-        self.freq_combo['values'] = ('El-Az', 'HA-DEC', "X-Y")
+        self.freq_combo['values'] = ('El-Az', 'HA-DEC', 'X-Y')
         self.freq_combo.grid(row=0, column=1, padx=10)
         self.freq_combo.current()
 
