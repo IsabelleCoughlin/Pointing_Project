@@ -138,7 +138,7 @@ class CSV_Analysis:
 
 class FinalData:
      
-    def __init__(self, data, final_data_path, grid_size):
+    def __init__(self, data, final_data_path, grid_size, object_name):
         '''
         Initialize and store the clean data as well as loading in the file that stores all officially completed and correct offset data
         for further analysis to build the pointing model
@@ -147,7 +147,8 @@ class FinalData:
         self.data = data
         final_data = pd.read_csv(final_data_path)
         self.final_data = final_data
-        self.grid_size = grid_size()
+        self.grid_size = grid_size
+        self.object_name = object_name
 
     
     def raster_grid(self):
@@ -214,21 +215,32 @@ class FinalData:
     
     def add_to_final(self, peak_index):
 
-        self.final_data.loc[len(self.final_data)] = [self.data.loc[peak_index,"X (Rot)"], self.data.loc[peak_index,"Y (Rot)"], self.data.loc[peak_index,"X (Target)"], self.data.loc[peak_index,"Y (Target)"], self.data.loc[peak_index,"X_offset"], self.data.loc[peak_index,"Y_offset"]]
-    
+        #self.final_data.loc[len(self.final_data)] = [self.object_name, self.data.loc[peak_index,"X (Rot)"], self.data.loc[peak_index,"Y (Rot)"], self.data.loc[peak_index,"X (Target)"], self.data.loc[peak_index,"Y (Target)"], self.data.loc[peak_index,"X_offset"], self.data.loc[peak_index,"Y_offset"]]
+        row = self.data.iloc[peak_index]  # ✅ get row by position
+        self.final_data.loc[len(self.final_data)] = [
+            self.object_name,
+            row["X (Rot)"],
+            row["Y (Rot)"],
+            row["X (Target)"],
+            row["Y (Target)"],
+            row["X_offset"],
+            row["Y_offset"]
+        ]
+
+
     def save_final(self):
-        self.final_data.to_csv('xy_df.csv', index = False)
+        self.final_data.to_csv('West-SBand.csv', index = False)
 
 class Graphical:
     
-    def __init__(self, data_path, grid_size):
+    def __init__(self, data_frame, grid_size):
         '''
         Initialize and store the clean data as well as loading in the file that stores all officially completed and correct offset data
         for further analysis to build the pointing model
         '''
         self.grid_size = grid_size
-        data = pd.read_csv(data_path)
-        self.data = data
+        #data = pd.read_csv(data_path)
+        self.data = data_frame
     
     def time_plot(self):
 
@@ -257,8 +269,9 @@ if __name__ == "__main__":
 
     #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
     #file_path = '/Users/isabe/Downloads/xy_conv2'
-    file_path = '/Users/isabe/Downloads/2025-07-02-26West-Cass-A-1'
+    file_path = '/Users/isabe/Documents/Pointing-Observations/26-West/date/2025-07-02-26West-Virgo-A-9x9-3.csv'
 
+    object_name = "Virgo-A"
 
     #radata = pd.read_csv(file_path)
     #print(radata.head())
@@ -269,7 +282,9 @@ if __name__ == "__main__":
     added_xy = analysis.add_XY_columns(extracted_rows.copy())
     added_HA = analysis.add_HA_columns(added_xy.copy())
 
-    print(added_HA.head())
+    
+
+    print(added_xy.head())
 
     #self.final_data.to_csv('xy_df.csv', index = False)
 
@@ -279,18 +294,22 @@ if __name__ == "__main__":
 
 
 
-    #grid_size = analysis.find_grid_size(added_xy)
+    grid_size = analysis.find_grid_size(added_xy)
+    print(grid_size)
     
-    #file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/xy_df.csv'
+    file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/West-SBand.csv'
 
-    #final = FinalData(added_xy, file_name_2, grid_size)
-    #_, peak_index = final.find_peak()
-    #power_values_grid, power_values = final.raster_grid()
+    final = FinalData(added_xy, file_name_2, grid_size, object_name)
+    _, peak_index = final.find_peak()
+    power_values_grid, power_values = final.raster_grid()
+
+    #final.add_to_final(peak_index)
+    #final.save_final()
 
 
-    #graphical = Graphical(added_xy, grid_size)
-    #graphical.time_plot()
-    #graphical.raster_plot()
+    graphical = Graphical(added_xy, grid_size)
+    graphical.time_plot()
+    graphical.raster_plot(power_values_grid)
 
 
 
