@@ -78,8 +78,8 @@ class CSV_Analysis:
             dec_offset = dec_target - dec_rot
 
             # Calculate XY Offsets
-            df['HA_offset'] = ha_offset
-            df['DEC_offset'] = dec_offset
+            df.loc[index, 'HA_offset'] = ha_offset
+            df.loc[index, 'DEC_offset'] = dec_offset
 
             # Add to dataframe
             df.loc[index, 'HA (Rot)'] = ha_rot
@@ -115,8 +115,8 @@ class CSV_Analysis:
             x_t_2, y_t_2 = altaz2xy(row["El"], row["Az"])
 
             # Calculate XY Offsets
-            df['X_offset'] = abs(x_2 - x_t_2)
-            df['Y_offset'] = abs(y_2 - y_t_2)
+            df.loc[index, 'X_offset'] = abs(x_2 - x_t_2)
+            df.loc[index, 'Y_offset'] = abs(y_2 - y_t_2)
 
             # Add to dataframe
             df.loc[index, 'X (Rot)'] = x_2
@@ -269,9 +269,9 @@ if __name__ == "__main__":
 
     #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
     #file_path = '/Users/isabe/Downloads/xy_conv2'
-    file_path = '/Users/isabe/Documents/Pointing-Observations/26-West/date/2025-07-02-26West-Virgo-A-9x9-3.csv'
+    file_path = '/Users/isabe/Downloads/HA'
 
-    object_name = "Virgo-A"
+    object_name = "None"
 
     #radata = pd.read_csv(file_path)
     #print(radata.head())
@@ -284,9 +284,9 @@ if __name__ == "__main__":
 
     
 
-    print(added_xy.head())
+    print(added_HA.head())
 
-    #self.final_data.to_csv('xy_df.csv', index = False)
+    added_HA.to_csv('HA_const_df.csv', index = False)
 
 
     #added_HA.to_csv('HA_offset.csv', index = False)
@@ -294,22 +294,22 @@ if __name__ == "__main__":
 
 
 
-    grid_size = analysis.find_grid_size(added_xy)
-    print(grid_size)
+    #grid_size = analysis.find_grid_size(added_xy)
+    #print(grid_size)
     
-    file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/West-SBand.csv'
+    #file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/West-SBand.csv'
 
-    final = FinalData(added_xy, file_name_2, grid_size, object_name)
-    _, peak_index = final.find_peak()
-    power_values_grid, power_values = final.raster_grid()
+    #final = FinalData(added_xy, file_name_2, grid_size, object_name)
+    #_, peak_index = final.find_peak()
+    #power_values_grid, power_values = final.raster_grid()
 
     #final.add_to_final(peak_index)
     #final.save_final()
 
 
-    graphical = Graphical(added_xy, grid_size)
-    graphical.time_plot()
-    graphical.raster_plot(power_values_grid)
+    #graphical = Graphical(added_xy, grid_size)
+    #graphical.time_plot()
+    #graphical.raster_plot(power_values_grid)
 
 
 

@@ -137,7 +137,7 @@ class RotatorGUI:
 
     def fill_grid_space(self, coord):
 
-        print(f"Coordinates at: {round(coord[0], 3)}, col: {round(coord[1], 3)}")
+        print(f"Coordinates at: {round(coord[0])}, col: {round(coord[1])}")
 
 
         center_offset = ((self.grid_size - 1)//2)
@@ -237,7 +237,7 @@ class RotatorGUI:
         self.freq_combo = ttk.Combobox(freq_frame, width=30)
         self.freq_combo['values'] = ('El-Az', 'HA-DEC', 'X-Y')
         self.freq_combo.grid(row=0, column=1, padx=10)
-        self.freq_combo.current()
+        self.freq_combo.current(0)
 
         self.scan_label = tk.Label(entry_frame, text="Number of Scans once on target:",  bg=self.color)
         self.scan_label.pack()

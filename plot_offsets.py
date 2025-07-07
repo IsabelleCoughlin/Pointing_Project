@@ -6,7 +6,7 @@ file_path = '/Users/isabe/pointing_project/Pointing_Project/West-SBand.csv'
 data = pd.read_csv(file_path)
 
 # Plot all peak vs center
-'''
+
 x_coordinates = data["Peak X"]
 y_coordinates = data["Peak Y"]
 x_off = data["Center X"]
@@ -24,9 +24,9 @@ plt.ylabel("Y-axis Label")
 plt.title("2D Plot of XY Coordinates")
 
 plt.show()
-'''
 
-'''
+
+
 # Plot x off vs X
 x_coordinates = data["Peak X"]
 x_off = data["Offset X"]
@@ -57,4 +57,4 @@ plt.title('Simple Bar Chart')
 
 # Display the chart
 plt.show()
-'''
+
