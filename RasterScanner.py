@@ -416,7 +416,8 @@ class RotatorController:
 
         '''
         #'El-Az', 'HA-DEC', "X-Y"
-        coord0, coord1 = 0
+        coord0 = 0
+        coord1 = 0
         self.cancel_scan = False
         rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
         coordinates = self.generate_offsets_grid(grid_size, precision, spacing)
