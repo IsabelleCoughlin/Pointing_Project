@@ -160,4 +160,23 @@ if __name__ == "__main__":
     dec2 = dec
     x3, y3 = hadec2xy(ha2, dec2, lat)
     print ('LAT: %.3f HA: %.3f  DEC: %.3f = X: %.3f  Y: %.3f' % (lat, ha2, dec2, x3, y3))
+
+    #x2 += 0.1
+    #y2 += 0.1
+
+
+    alt_1 = 30
+    az_1 = 30
+    
+    x_1, y_1 = altaz2xy(alt_1, az_1)
+    alt3, az3 = xy2altaz(x_1, y_1)
+    #altoff = alt3-alt2
+    #azOff = (az2-az3)
+    
+    print(round(alt3, 2),round(az3, 2))
+    #print(altoff, azOff)
+
+
+
+    
     

@@ -17,6 +17,11 @@ import socket
 import threading
 import queue
 from xymount import altaz2xy, xy2altaz, xy2hadec, hadec2xy
+from astropy.coordinates import EarthLocation, AltAz, SkyCoord
+from astropy.time import Time
+import astropy.units as u
+from datetime import datetime, timezone
+
 
 '''
 Local variables defined but also overwritten by GUI user input
@@ -29,8 +34,8 @@ precision = 0
 rotator_connection = True
 tolerance = 0.1
 spacing = 0.1
-scan = 5
-selected = 'HA-DEC'
+scan = 1
+selected = 'X-Y'
 
 class RotatorController:
 
@@ -210,8 +215,10 @@ class RotatorController:
             print(f"Error calculating integration time: {e}")
             return None
         
-    def XY_offset(self, targetAz_raw, targetEl_raw, xOff, yOff, spacing):
-        x_target, y_target = altaz2xy(targetEl_raw, targetAz_raw)
+    def XY_offset(self, targetAz_raw, targetEl_raw, xOff, yOff):
+        x_target_raw, y_target_raw = altaz2xy(targetEl_raw, targetAz_raw)
+        x_target = round(x_target_raw, 2)
+        y_target = round(y_target_raw, 2)
         
         x_new = x_target + xOff
         y_new = y_target + yOff
@@ -220,7 +227,9 @@ class RotatorController:
         #alt_offset = targetEl_raw - alt_target
         #az_offset = targetAz_raw - az_target
         #return round(az_offset, 3)%360,  round(alt_offset, 3)%360
-        newEl, newAz = xy2altaz(x_new, y_new)
+        newEl_raw, newAz_raw = xy2altaz(x_new, y_new)
+        newEl  = round(newEl_raw, 2)
+        newAz = round(newAz_raw, 2)
 
     # Step 4: Calculate angular offsets from the central point
         az_offset = (newAz - targetAz_raw) % 360
@@ -229,17 +238,26 @@ class RotatorController:
 
         el_offset = newEl - targetEl_raw
 
-        return round(az_offset, 3), round(el_offset, 3)
+        return round(az_offset, 2), round(el_offset, 2)
     
     def HA_DEC_offsets(self, targetAz_raw, targetEl_raw, HAOff, DECOff):
         lat = -84
-        x_target, y_target = altaz2xy(targetEl_raw, targetAz_raw)
-        ha_target, dec_target = xy2hadec(x_target, y_target, lat)
+        x_target_raw, y_target_raw = altaz2xy(targetEl_raw, targetAz_raw)
+        x_target = round(x_target_raw,2)
+        y_target = round(y_target_raw, 2)
+
+        ha_target_raw, dec_target_raw = xy2hadec(x_target, y_target, lat)
+        ha_target = round(ha_target_raw,2)
+        dec_target = round(dec_target_raw,2)
         ha_new = ha_target + HAOff
         dec_new = dec_target + DECOff
 
-        x_new, y_new = hadec2xy(ha_new, dec_new, lat)
-        newEl, newAz = xy2altaz(x_new, y_new)
+        x_new_raw, y_new_raw = hadec2xy(ha_new, dec_new, lat)
+        x_new = round(x_new_raw,2)
+        y_new = round(y_new_raw, 2)
+        newEl_raw, newAz_raw = xy2altaz(x_new, y_new)
+        newEl = round(newEl_raw, 2)
+        newAz = round(newAz_raw, 2)
 
         az_offset = (newAz - targetAz_raw) % 360
         if az_offset > 180:  # Shortest path around the circle
@@ -249,6 +267,97 @@ class RotatorController:
 
         return round(az_offset, 3), round(el_offset, 3)
 
+    
+    '''
+    def HA_DEC_offsets(self, targetAz_raw, targetEl_raw, HAOff, DECOff):
+           
+        obs_time_str = datetime.now(timezone.utc)
+
+        longitude_deg = -82
+        latitude_deg = 35
+        location = EarthLocation(lat=latitude_deg*u.deg, lon=longitude_deg*u.deg)
+        obs_time = Time(obs_time_str)
+
+        # Step 1: Alt/Az of target
+        altaz_frame = AltAz(obstime=obs_time, location=location)
+        altaz_coord = SkyCoord(az=targetAz_raw*u.deg, alt=targetEl_raw*u.deg, frame=altaz_frame)
+
+        # Step 2: Convert to ICRS (RA/Dec), then to HA/Dec
+        radec = altaz_coord.transform_to('icrs')
+        lst = obs_time.sidereal_time('apparent', longitude=location.lon)
+        ha = (lst - radec.ra).wrap_at(360*u.deg)
+
+        ha_deg = ha.deg
+        dec_deg = radec.dec.deg
+
+        # Step 3: Apply HA/DEC offset
+        ha_new = ha_deg + HAOff
+        dec_new = dec_deg + DECOff
+
+        # Step 4: Convert back to RA
+        ra_new = (lst.deg - ha_new) % 360
+        new_coord = SkyCoord(ra=ra_new*u.deg, dec=dec_new*u.deg, frame='icrs')
+
+        # Step 5: Convert to new AltAz
+        new_altaz = new_coord.transform_to(altaz_frame)
+
+        # Step 6: Get Az/El offset from original
+        az_offset = (new_altaz.az.deg - targetAz_raw) % 360
+        if az_offset > 180:
+            az_offset -= 360
+
+        el_offset = new_altaz.alt.deg - targetEl_raw
+
+        print(f"Original HA/DEC: ({ha_deg:.3f}, {dec_deg:.3f})")
+        print(f"Applied Offset: ΔHA = {HAOff}, ΔDEC = {DECOff}")
+        print(f"New HA/DEC: ({ha_new:.3f}, {dec_new:.3f})")
+        print(f"New Alt/Az: {new_altaz.az.deg:.3f}, New DEC: {new_altaz.alt.deg:.3f}")
+
+        return round(az_offset, 3), round(el_offset, 3)
+        
+        obs_time_str = datetime.now(timezone.utc)
+        obs_time = Time(obs_time_str)
+
+        # Observer location
+        location = EarthLocation(lat=35*u.deg, lon=-82*u.deg)
+
+        # Convert Alt/Az to SkyCoord
+        altaz_frame = AltAz(obstime=obs_time, location=location)
+        altaz_coord = SkyCoord(az=targetAz_raw*u.deg, alt=targetEl_raw*u.deg, frame=altaz_frame)
+
+        # Convert to ICRS → get RA/Dec
+        radec = altaz_coord.transform_to('icrs')
+
+        # Get current LST
+        lst = obs_time.sidereal_time('apparent', longitude=location.lon)
+
+        # Calculate HA in degrees
+        ha = (lst - radec.ra).wrap_at(360*u.deg)
+        ha_deg = ha.deg
+        dec_deg = radec.dec.deg
+
+        # ✅ Step 3: Apply your degree offsets
+        ha_new = ha_deg + HAOff
+        dec_new = dec_deg + DECOff
+
+        # Convert back to RA (RA = LST - HA)
+        ra_new = (lst.deg - ha_new) % 360
+
+        # Create new SkyCoord with updated RA/Dec
+        new_coord = SkyCoord(ra=ra_new*u.deg, dec=dec_new*u.deg, frame='icrs')
+
+        # Convert back to AltAz
+        new_altaz = new_coord.transform_to(altaz_frame)
+
+        # Compute offset in Az/El
+        az_offset = (new_altaz.az.deg - targetAz_raw) % 360
+        if az_offset > 180:
+            az_offset -= 360
+
+        el_offset = new_altaz.alt.deg - targetEl_raw
+
+        return round(az_offset, 3), round(el_offset, 3)
+        '''
 
     def update_offsets(self, azOff_new, elOff_new, settings, data, url):
         '''
@@ -307,7 +416,7 @@ class RotatorController:
 
         '''
         #'El-Az', 'HA-DEC', "X-Y"
-        
+        coord0, coord1 = 0
         self.cancel_scan = False
         rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
         coordinates = self.generate_offsets_grid(grid_size, precision, spacing)
@@ -332,16 +441,17 @@ class RotatorController:
 
             settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
             
-            
-            print(selected)
-            
             if selected == 'HA-DEC':
-                
+                print("HAstringcoord")
+                print(coord)
                 coord0, coord1 = self.HA_DEC_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
+                print(coord0, coord1)
                 self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
             elif selected == 'X-Y':
+                print("stringcoord")
                 
-                coord0, coord1 = self.XY_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
+                coord0, coord1 = self.XY_offset(targetAz_raw, targetEl_raw, coord[0], coord[1])
+                print(coord0, coord1)
                 self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
             else:
                 self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
@@ -358,7 +468,7 @@ class RotatorController:
 
                 settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
                 
-                print(azOff_raw, elOff_raw)
+                #print(azOff_raw, elOff_raw)
                 
                 if self.cancel_scan:
                     self.update_offsets(0, 0, settings, data, rotator_settings_url)
@@ -379,10 +489,13 @@ class RotatorController:
 
                 self.data_queue.put("\n")
                 data_1 = f"My coord Offsets: Azimuth: {coord[0]}, Elevation: {coord[1]}"
+
                 data_5 = f"SDRAngel Offsets: Azimuth: {azOff}, Elevation: {elOff}"
 
                 self.data_queue.put(data_1)
                 self.data_queue.put(data_5)
+                dataaa = f"Coord0: Azimuth: {coord0}, Elevation: {coord1}"
+                self.data_queue.put(dataaa)
 
 
                 data_2 = f"Current Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}"

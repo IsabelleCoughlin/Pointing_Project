@@ -74,12 +74,12 @@ class CSV_Analysis:
             x_target, y_target = altaz2xy(row["El"], row["Az"])
             ha_target, dec_target = xy2hadec(x_target, y_target, lat)
 
-            ha_offset = ha_target - ha_rot
-            dec_offset = dec_target - dec_rot
+            ha_offset = ha_rot - ha_target
+            dec_offset = dec_rot - dec_target
 
             # Calculate XY Offsets
-            df.loc[index, 'HA_offset'] = ha_offset
-            df.loc[index, 'DEC_offset'] = dec_offset
+            df.loc[index, 'HA_offset'] = round(ha_offset, 2)
+            df.loc[index, 'DEC_offset'] = round(dec_offset, 2)
 
             # Add to dataframe
             df.loc[index, 'HA (Rot)'] = ha_rot
@@ -110,13 +110,18 @@ class CSV_Analysis:
         for index, row in df.iterrows():
 
             # Convert to XY Coordinates using Lamar's xymount.py code
-            x_2, y_2 = altaz2xy(row["El (Rot)"], row["Az (Rot)"])
+            x_2_raw, y_2_raw = altaz2xy(row["El (Rot)"], row["Az (Rot)"])
+            x_2 = round(x_2_raw, 2)
+            y_2 = round(y_2_raw, 2)
 
-            x_t_2, y_t_2 = altaz2xy(row["El"], row["Az"])
+            x_t_2_raw, y_t_2_raw = altaz2xy(row["El"], row["Az"])
+            x_t_2 = round(x_t_2_raw, 2)
+            y_t_2 = round(y_t_2_raw, 2)
+
 
             # Calculate XY Offsets
-            df.loc[index, 'X_offset'] = abs(x_2 - x_t_2)
-            df.loc[index, 'Y_offset'] = abs(y_2 - y_t_2)
+            df.loc[index, 'X_offset'] = round((x_2 - x_t_2), 2)
+            df.loc[index, 'Y_offset'] = round((y_2 - y_t_2), 2)
 
             # Add to dataframe
             df.loc[index, 'X (Rot)'] = x_2
@@ -269,7 +274,7 @@ if __name__ == "__main__":
 
     #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
     #file_path = '/Users/isabe/Downloads/xy_conv2'
-    file_path = '/Users/isabe/Downloads/HA'
+    file_path = '/Users/isabe/Downloads/haaaa'
 
     object_name = "None"
 
@@ -278,15 +283,15 @@ if __name__ == "__main__":
 
 
     analysis = CSV_Analysis(file_path)
-    extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
-    added_xy = analysis.add_XY_columns(extracted_rows.copy())
+    #extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
+    added_xy = analysis.add_XY_columns(analysis.raw_data.copy())
     added_HA = analysis.add_HA_columns(added_xy.copy())
 
     
 
     print(added_HA.head())
 
-    added_HA.to_csv('HA_const_df.csv', index = False)
+    added_HA.to_csv('DEr_df.csv', index = False)
 
 
     #added_HA.to_csv('HA_offset.csv', index = False)
