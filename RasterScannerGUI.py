@@ -400,8 +400,8 @@ class RotatorGUI:
 
         self.SDRangel_host_entry = tk.Entry(entry_frame)
         self.SDRangel_host_entry.pack()
-        #self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
-        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
+        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+        #self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
 
         self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
         self.SDRangel_port_label.pack()

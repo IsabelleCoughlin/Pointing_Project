@@ -111,14 +111,14 @@ class RotatorController:
             return None, None
     '''
     def generate_daisy_grid(self):
-        '''
+        
         The Radius (R) in arcminutes
         The number of petals (Np)
         The Integration time (Tint) in seconds.
         The total duration (Tdur) in seconds.
         If 'n' is odd: The rose curve has n petals. The graph is complete over the interval 0 ≤ θ < π.
         If 'n' is even: The rose curve has 2n petals. The graph is complete over the interval 0 ≤ θ < 2π. - google
-        '''
+        
         r = 2
         Np = 4
 
