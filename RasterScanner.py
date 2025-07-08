@@ -21,7 +21,7 @@ from astropy.coordinates import EarthLocation, AltAz, SkyCoord
 from astropy.time import Time
 import astropy.units as u
 from datetime import datetime, timezone
-
+import math
 '''
 Local variables defined but also overwritten by GUI user input
 '''
@@ -109,6 +109,34 @@ class RotatorController:
         except Exception as e:
             print(f"Error opening device settings: {e}")
             return None, None
+    '''
+    def generate_daisy_grid(self):
+        '''
+        The Radius (R) in arcminutes
+        The number of petals (Np)
+        The Integration time (Tint) in seconds.
+        The total duration (Tdur) in seconds.
+        If 'n' is odd: The rose curve has n petals. The graph is complete over the interval 0 ≤ θ < π.
+        If 'n' is even: The rose curve has 2n petals. The graph is complete over the interval 0 ≤ θ < 2π. - google
+        '''
+        r = 2
+        Np = 4
+
+        coordinates = []
+        for theta in range(2*math.pi):
+            if Np%2 == 0:
+                Np = Np/2
+                y = r*math.cos(Np*y)
+            else:
+                y = r*math.cos(Np*y)
+
+            x = y * math.cos(theta)
+            y_coord = y*math.sin(theta)
+            
+            coordinates.append([x, y_coord])
+
+
+    '''
 
     def generate_offsets_grid(self, size, precision, spacing): # From leetcode implementation
         '''

@@ -105,7 +105,7 @@ class RotatorGUI:
         self.status_label.config(text="Status: Scanning...")
         self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, selected, on_complete = self.on_scan_complete)
 
-        self.build_XY_grid(self.main_frame, grid_size, spacing)
+        #self.build_XY_grid(self.main_frame, grid_size, spacing)
   
     
 
@@ -252,28 +252,74 @@ class RotatorGUI:
         x_end = x_center + half_space + spacing
         y_start = y_center - half_space
         y_end = y_center + half_space + spacing
+        
+        x_vals = np.arange(x_start, x_end, spacing)
+        y_vals = np.arange(y_start, y_end, spacing)
+
+        
 
         # Grid arrays
-        x_vals = np.radians(np.arange(x_start, x_end, spacing))  # In radians
-        y_vals = np.arange(y_start, y_end, spacing) * u.deg
+        #x_vals = np.radians(np.arange(x_start, x_end, spacing))  # In radians
+        #y_vals = np.arange(y_start, y_end, spacing) * u.deg
 
-        HA, DEC = np.meshgrid(x_vals, y_vals)
+        X, Y = np.meshgrid(x_vals, y_vals)
+
+        alt_vals, az_vals = xy2altaz(X,Y)
+        print(alt_vals)
+        print(az_vals)
+
+        alt_flat = alt_vals.flatten()
+        az_flat_deg = az_vals.flatten()
+        az_flat_rad = np.deg2rad(az_flat_deg)  # Polar plots use radians
+        '''
+        # Polar plot
+        fig = plt.figure()
+        ax = fig.add_subplot(111, polar=True)
+        ax.set_theta_zero_location('N')  # 0° at the top
+        ax.set_theta_direction(-1)       # Clockwise
+
+        sc = ax.scatter(az_flat_rad, alt_flat, c=alt_flat, cmap='viridis', s=10)
+        plt.colorbar(sc, label='Elevation (deg)')
+        ax.set_rlim(0, 90)  # Elevation from 0 to 90 degrees
+        ax.set_title("Azimuth-Elevation Plot")
+        '''
+        fig, ax = plt.subplots()
+
+        for i in range(alt_vals.shape[0]):
+            ax.plot(az_vals[i], alt_vals[i], 'b-', label='Y Grid' if i == 0 else "")
+
+        # Plot vertical grid lines (constant X, so loop over columns)
+        for j in range(az_vals.shape[1]):
+            ax.plot(az_vals[:, j], alt_vals[:, j], 'r--', label='X Grid' if j == 0 else "")
+
+        ax.set_xlabel('Azimuth (deg)')
+        ax.set_ylabel('Elevation (deg)')
+        ax.set_title('Azimuth vs Elevation over XY Grid')
+        plt.grid(True)
+
+        canvas = FigureCanvasTkAgg(fig, master=parent)  
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+
+
+
 
         # Convert HA back to RA
-        RA = Longitude(lst - HA * u.rad, wrap_angle=360 * u.deg)
+        #RA = Longitude(lst - HA * u.rad, wrap_angle=360 * u.deg)
 
         # SkyCoord for projection
-        coords = SkyCoord(ra=RA.flatten(), dec=DEC.flatten(), frame='icrs')
-        altaz_frame = AltAz(obstime=obstime, location=location)
-        altaz_coords = coords.transform_to(altaz_frame)
+        #coords = SkyCoord(ra=RA.flatten(), dec=DEC.flatten(), frame='icrs')
+        #altaz_frame = AltAz(obstime=obstime, location=location)
+        #altaz_coords = coords.transform_to(altaz_frame)
 
         # Reshape for plotting
-        ALT = altaz_coords.alt.deg.reshape(DEC.shape)
-        AZ = altaz_coords.az.deg.reshape(DEC.shape)
+        #ALT = altaz_coords.alt.deg.reshape(DEC.shape)
+        #AZ = altaz_coords.az.deg.reshape(DEC.shape)
 
         # Plot
         #plt.figure(figsize=(8, 6))
-
+        '''
         fig = Figure(figsize=(5, 4), dpi=100)
 
         ax = fig.add_subplot(111)  # Add a subplot to the figure
@@ -294,12 +340,13 @@ class RotatorGUI:
         ax.legend()
         ax.set_xlim(AZ.min() - grid_limits, AZ.max() + grid_limits)
         ax.set_ylim(ALT.min() - grid_limits, ALT.max() + grid_limits)
-
+        
 
 
         canvas = FigureCanvasTkAgg(fig, master=parent)  
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        '''
         
 
 
