@@ -42,7 +42,7 @@ def altaz2xy(alt, az):
     x = np.degrees(np.arctan2(XU, XL))
     y = np.degrees(np.arcsin(np.cos(np.radians(alt)) * np.cos(np.radians(az))))
     return(x, y)
-
+4
 #hadec2xy: returns xy given ha,dec, and latitude
 # from CoordConv.xlsx
 # B2=lat

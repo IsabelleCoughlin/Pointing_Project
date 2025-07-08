@@ -7,6 +7,16 @@ from PIL import Image, ImageTk
 from RasterScanner import RotatorController
 from tkinter import messagebox
 import queue
+import numpy as np
+import matplotlib.pyplot as plt
+from astropy.coordinates import AltAz, ICRS, EarthLocation, SkyCoord
+from astropy.time import Time
+import astropy.units as u
+from astropy.coordinates import Longitude
+from datetime import datetime, timezone
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from xymount import altaz2xy, xy2altaz, hadec2xy, xy2hadec
 
 class RotatorGUI:
 
@@ -19,24 +29,28 @@ class RotatorGUI:
         #self.root.geometry("900x900")
         self.color = 'LavenderBlush3'
         #self.root.configure(bg=self.color)
+        self.lat = 35.19909314527451
+        self.long = -82.87202924351159
 
         self.build_header()
         self.build_title()
 
-        main_frame = tk.Frame(root, bg = self.color)
-        main_frame.pack(side = "top", fill = "x", padx = 20, pady = 20)
+        self.main_frame = tk.Frame(root, bg = self.color)
+        self.main_frame.pack(side = "top", fill = "x", padx = 20, pady = 20)
 
         # Build the GUI header and title
         self.data_queue = queue.Queue()
         self.grid_queue = queue.Queue()
+        self.center_queue = queue.Queue()
 
         # GUI Elements
         '''
         The following should all be on the left
         '''
 
-        self.build_entries(main_frame)
-        self.build_empty_grid(main_frame)
+        self.build_entries(self.main_frame)
+        self.build_empty_grid(self.main_frame)
+        
 
         self.start_button = tk.Button(root, text="Start Scan", command=self.start_scan)
         self.start_button.pack()
@@ -64,10 +78,13 @@ class RotatorGUI:
         self.text_widget.delete("1.0", tk.END)  # Clear text output
         self.data_queue.queue.clear()           # Flush leftover data
         self.grid_queue.queue.clear()
+        self.center_queue.queue.clear()
         self.canvas.delete("all")               # Clear canvas before redrawing
         grid_size = int(self.grid_entry.get())
         self.build_grid(grid_size)
         selected = self.freq_combo.get()
+
+        
         
         grid_size = int(self.grid_entry.get())
         host = self.SDRangel_host_entry.get()
@@ -80,13 +97,16 @@ class RotatorGUI:
         self.build_grid(grid_size)
         self.grid_size = grid_size
         self.spacing = spacing
+
     
-        self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue) 
+        self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue, center_queue = self.center_queue) 
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
         self.cancel_button.pack()
         self.status_label.config(text="Status: Scanning...")
         self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, selected, on_complete = self.on_scan_complete)
-        
+
+        self.build_XY_grid(self.main_frame, grid_size, spacing)
+  
     
 
     def update_gui(self):
@@ -114,6 +134,7 @@ class RotatorGUI:
 
         self.grid_queue.queue.clear()
         self.data_queue.queue.clear()
+        self.center_queue.queue.clear()
 
     def on_scan_complete(self):
         self.running = False
@@ -132,18 +153,163 @@ class RotatorGUI:
         #self.inner_grid_frame = tk.Frame(self.grid_frame, bg = "white", width = 300, height = 300)
         #self.inner_grid_frame.pack(padx = 2, pady = 2)
 
+    def build_HA_DEC_grid(self, parent, grid_size, spacing):
+        az = self.center_queue.get()*u.deg
+        el = self.center_queue.get()*u.deg
+
+        current_utc_time = datetime.now(timezone.utc)
+        location = EarthLocation(lat=self.lat*u.deg, lon=self.long*u.deg, height=250*u.m)
+        obstime = Time(current_utc_time, scale="utc")
+        
+
+        center_altaz_coord = AltAz(alt=el, az=az, obstime=obstime, location=location)
+        icrs_coord = center_altaz_coord.transform_to(ICRS())
+        ra = icrs_coord.ra
+        dec = icrs_coord.dec
+        lst = obstime.sidereal_time('apparent', longitude=self.long * u.deg)
+
+        # Transform telescope center AltAz to ICRS (RA/Dec)
+        center_altaz_coord = AltAz(alt=el, az=az, obstime=obstime, location=location)
+        icrs_coord = center_altaz_coord.transform_to(ICRS())
+        ra = icrs_coord.ra
+        dec = icrs_coord.dec
+
+        # Compute Hour Angle (HA = LST - RA)
+        ha = (lst - ra).wrap_at(180 * u.deg)
+        ha_deg = ha.degree
+        dec_deg = dec.degree
+
+        # Grid bounds
+        total_space = grid_size * spacing
+        half_space = total_space / 2
+        ha_start = ha_deg - half_space
+        ha_end = ha_deg + half_space + spacing
+        dec_start = dec_deg - half_space
+        dec_end = dec_deg + half_space + spacing
+
+        # Grid arrays
+        ha_vals = np.radians(np.arange(ha_start, ha_end, spacing))  # In radians
+        dec_vals = np.arange(dec_start, dec_end, spacing) * u.deg
+
+        HA, DEC = np.meshgrid(ha_vals, dec_vals)
+
+        # Convert HA back to RA
+        RA = Longitude(lst - HA * u.rad, wrap_angle=360 * u.deg)
+
+        # SkyCoord for projection
+        coords = SkyCoord(ra=RA.flatten(), dec=DEC.flatten(), frame='icrs')
+        altaz_frame = AltAz(obstime=obstime, location=location)
+        altaz_coords = coords.transform_to(altaz_frame)
+
+        # Reshape for plotting
+        ALT = altaz_coords.alt.deg.reshape(DEC.shape)
+        AZ = altaz_coords.az.deg.reshape(DEC.shape)
+
+        # Plot
+        #plt.figure(figsize=(8, 6))
+
+        fig = Figure(figsize=(5, 4), dpi=100)
+
+        ax = fig.add_subplot(111)  # Add a subplot to the figure
+
+        # Plot grid lines
+        for i in range(ALT.shape[0]):
+            ax.plot(AZ[i], ALT[i], 'b-', label='Dec Grid' if i == 0 else "")
+        for j in range(ALT.shape[1]):
+            ax.plot(AZ[:, j], ALT[:, j], 'r--', label='HA Grid' if j == 0 else "")
+
+        grid_limits = grid_size*spacing/5#+ 3*spacing
+
+        # Set labels and limits
+        ax.set_xlabel('Azimuth (°)')
+        ax.set_ylabel('Elevation (°)')
+        ax.set_title('HA/Dec Grid Projected to Az/El')
+        ax.grid(True)
+        ax.legend()
+        ax.set_xlim(AZ.min() - grid_limits, AZ.max() + grid_limits)
+        ax.set_ylim(ALT.min() - grid_limits, ALT.max() + grid_limits)
+
+
+
+        canvas = FigureCanvasTkAgg(fig, master=parent)  
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+    def build_XY_grid(self, parent, grid_size, spacing):
+        az = self.center_queue.get()*u.deg
+        el = self.center_queue.get()*u.deg
+
+        current_utc_time = datetime.now(timezone.utc)
+        location = EarthLocation(lat=self.lat*u.deg, lon=self.long*u.deg, height=250*u.m)
+        obstime = Time(current_utc_time, scale="utc")
+        
+        x_center, y_center  = altaz2xy(el, az)
+        
+        # Grid bounds
+        total_space = grid_size * spacing
+        half_space = total_space / 2
+        x_start = x_center - half_space
+        x_end = x_center + half_space + spacing
+        y_start = y_center - half_space
+        y_end = y_center + half_space + spacing
+
+        # Grid arrays
+        x_vals = np.radians(np.arange(x_start, x_end, spacing))  # In radians
+        y_vals = np.arange(y_start, y_end, spacing) * u.deg
+
+        HA, DEC = np.meshgrid(x_vals, y_vals)
+
+        # Convert HA back to RA
+        RA = Longitude(lst - HA * u.rad, wrap_angle=360 * u.deg)
+
+        # SkyCoord for projection
+        coords = SkyCoord(ra=RA.flatten(), dec=DEC.flatten(), frame='icrs')
+        altaz_frame = AltAz(obstime=obstime, location=location)
+        altaz_coords = coords.transform_to(altaz_frame)
+
+        # Reshape for plotting
+        ALT = altaz_coords.alt.deg.reshape(DEC.shape)
+        AZ = altaz_coords.az.deg.reshape(DEC.shape)
+
+        # Plot
+        #plt.figure(figsize=(8, 6))
+
+        fig = Figure(figsize=(5, 4), dpi=100)
+
+        ax = fig.add_subplot(111)  # Add a subplot to the figure
+
+        # Plot grid lines
+        for i in range(ALT.shape[0]):
+            ax.plot(AZ[i], ALT[i], 'b-', label='Dec Grid' if i == 0 else "")
+        for j in range(ALT.shape[1]):
+            ax.plot(AZ[:, j], ALT[:, j], 'r--', label='HA Grid' if j == 0 else "")
+
+        grid_limits = grid_size*spacing/5#+ 3*spacing
+
+        # Set labels and limits
+        ax.set_xlabel('Azimuth (°)')
+        ax.set_ylabel('Elevation (°)')
+        ax.set_title('HA/Dec Grid Projected to Az/El')
+        ax.grid(True)
+        ax.legend()
+        ax.set_xlim(AZ.min() - grid_limits, AZ.max() + grid_limits)
+        ax.set_ylim(ALT.min() - grid_limits, ALT.max() + grid_limits)
+
+
+
+        canvas = FigureCanvasTkAgg(fig, master=parent)  
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        
+
 
     def fill_grid_space(self, coord):
-
-        print(f"Coordinates at: {round(coord[0])}, col: {round(coord[1])}")
-
 
         center_offset = ((self.grid_size - 1)//2)
 
         col = round(round(coord[0], 3)/self.spacing) + center_offset
         row = round(round(coord[1], 3)/self.spacing) + center_offset
         invert_row = (self.grid_size - 1) - row
-        print(f"Drawing at row: {row}, col: {col}")
 
         canvas_size = 300
         cell_size = canvas_size // self.grid_size
@@ -159,15 +325,7 @@ class RotatorGUI:
 
     def build_grid(self, grid_size):
         self.canvas.delete("all")
-        '''
-        try:
-            grid_size = int(self.grid_entry.get())
-            if grid_size % 2 == 0 or grid_size <= 0:
-                raise ValueError("Grid size must be a positive odd number.")
-        except ValueError as e:
-            tk.messagebox.showerror("Invalid Input", str(e))
-            return
-        '''
+       
         canvas_size = 300
         cell_size = canvas_size // grid_size
         for i in range(grid_size + 1):
@@ -195,8 +353,8 @@ class RotatorGUI:
 
         self.SDRangel_host_entry = tk.Entry(entry_frame)
         self.SDRangel_host_entry.pack()
-        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
-        #self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
+        #self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
 
         self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
         self.SDRangel_port_label.pack()
