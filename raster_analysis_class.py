@@ -6,6 +6,10 @@ from xymount import altaz2xy,  xy2hadec, hadec2xy, xy2altaz
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
+from astropy.coordinates import EarthLocation, AltAz, SkyCoord
+from astropy.time import Time
+import astropy.units as u
+from datetime import datetime, timezone
 
 class CSV_Analysis:
 
@@ -55,7 +59,7 @@ class CSV_Analysis:
         # Save in another dataframe
         return pd.DataFrame(my_list)
     
-    def add_HA_columns(self, df):
+    def add_HA_columns(self, df, spacing):
         df['HA (target)'] = np.nan
         df['HA (Rot)'] = np.nan
         df['Dec (Target)'] = np.nan
@@ -63,24 +67,28 @@ class CSV_Analysis:
 
         df['HA_offset'] = np.nan
         df['DEC_offset'] = np.nan
-        lat = -84
-
+        lat = 35.19909314527451
+        
         for index, row in df.iterrows():
 
             # Convert to XY Coordinates using Lamar's xymount.py code
-            x_rot, y_rot = altaz2xy(row["El (Rot)"], row["Az (Rot)"])
+            x_rot, y_rot = altaz2xy(round(row["El (Rot)"], 2), round(row["Az (Rot)"], 2))
             ha_rot, dec_rot = xy2hadec(x_rot, y_rot, lat)
 
-            x_target, y_target = altaz2xy(row["El"], row["Az"])
+            x_target, y_target = altaz2xy(round(row["El"], 2), round(row["Az"], 2))
             ha_target, dec_target = xy2hadec(x_target, y_target, lat)
 
-            ha_offset = ha_rot - ha_target
+            # = ha_rot - ha_target
+            ha_offset = (ha_rot - ha_target)
+
             dec_offset = dec_rot - dec_target
 
             # Calculate XY Offsets
-            df.loc[index, 'HA_offset'] = round(ha_offset, 2)
-            df.loc[index, 'DEC_offset'] = round(dec_offset, 2)
-
+            #df.loc[index, 'HA_offset'] = round(ha_offset, 2)
+            #f.loc[index, 'DEC_offset'] = round(dec_offset, 2)
+            df.loc[index, 'HA_offset'] = round(round(ha_offset / spacing) * spacing, 2)
+            df.loc[index, 'DEC_offset'] = round(round(dec_offset / spacing) * spacing, 2)
+            
             # Add to dataframe
             df.loc[index, 'HA (Rot)'] = ha_rot
             df.loc[index, 'DEC (Rot)'] = dec_rot
@@ -88,8 +96,6 @@ class CSV_Analysis:
             df.loc[index, 'DEC (Target)'] = dec_target
 
         return df
-
-
         
 
     # remember: df is mutable so this will change the one that is passed in !!
@@ -110,11 +116,12 @@ class CSV_Analysis:
         for index, row in df.iterrows():
 
             # Convert to XY Coordinates using Lamar's xymount.py code
-            x_2_raw, y_2_raw = altaz2xy(row["El (Rot)"], row["Az (Rot)"])
+            x_2_raw, y_2_raw = altaz2xy(round(row["El (Rot)"], 2), round(row["Az (Rot)"], 2))
             x_2 = round(x_2_raw, 2)
             y_2 = round(y_2_raw, 2)
 
-            x_t_2_raw, y_t_2_raw = altaz2xy(row["El"], row["Az"])
+
+            x_t_2_raw, y_t_2_raw = altaz2xy(round(row["El"], 2), round(row["Az"], 2))
             x_t_2 = round(x_t_2_raw, 2)
             y_t_2 = round(y_t_2_raw, 2)
 
@@ -274,24 +281,25 @@ if __name__ == "__main__":
 
     #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
     #file_path = '/Users/isabe/Downloads/xy_conv2'
-    file_path = '/Users/isabe/Downloads/haaaa'
+    file_path = '/Users/isabe/Downloads/th'
 
     object_name = "None"
 
     #radata = pd.read_csv(file_path)
     #print(radata.head())
+    spacing = 0.1
 
 
     analysis = CSV_Analysis(file_path)
     #extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
     added_xy = analysis.add_XY_columns(analysis.raw_data.copy())
-    added_HA = analysis.add_HA_columns(added_xy.copy())
+    added_HA = analysis.add_HA_columns(added_xy.copy(), spacing)
 
     
 
     print(added_HA.head())
 
-    added_HA.to_csv('DEr_df.csv', index = False)
+    added_HA.to_csv('te_df.csv', index = False)
 
 
     #added_HA.to_csv('HA_offset.csv', index = False)

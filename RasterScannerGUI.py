@@ -25,11 +25,8 @@ class RotatorGUI:
 
         main_frame = tk.Frame(root, bg = self.color)
         main_frame.pack(side = "top", fill = "x", padx = 20, pady = 20)
-
-
-        # Build the GUI header and title
         
-
+        # Build the GUI header and title
         self.data_queue = queue.Queue()
         self.grid_queue = queue.Queue()
 

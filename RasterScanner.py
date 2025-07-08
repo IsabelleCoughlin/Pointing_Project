@@ -35,7 +35,7 @@ rotator_connection = True
 tolerance = 0.1
 spacing = 0.1
 scan = 1
-selected = 'X-Y'
+selected = 'HA-DEC'
 
 class RotatorController:
 
@@ -241,7 +241,9 @@ class RotatorController:
         return round(az_offset, 2), round(el_offset, 2)
     
     def HA_DEC_offsets(self, targetAz_raw, targetEl_raw, HAOff, DECOff):
-        lat = -84
+
+        #35.19909314527451, -82.87202924351159
+        lat = 35.19909314527451
         x_target_raw, y_target_raw = altaz2xy(targetEl_raw, targetAz_raw)
         x_target = round(x_target_raw,2)
         y_target = round(y_target_raw, 2)
@@ -336,7 +338,7 @@ class RotatorController:
         ha_deg = ha.deg
         dec_deg = radec.dec.deg
 
-        # ✅ Step 3: Apply your degree offsets
+        # Step 3: Apply your degree offsets
         ha_new = ha_deg + HAOff
         dec_new = dec_deg + DECOff
 
