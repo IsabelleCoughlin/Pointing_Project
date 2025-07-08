@@ -2,14 +2,10 @@
 import numpy as np
 import pandas as pd
 from astropy.time import Time
-from xymount import altaz2xy,  xy2hadec, hadec2xy, xy2altaz
+from xymount import altaz2xy,  xy2hadec
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
-from astropy.coordinates import EarthLocation, AltAz, SkyCoord
-from astropy.time import Time
-import astropy.units as u
-from datetime import datetime, timezone
 
 class CSV_Analysis:
 
@@ -78,7 +74,6 @@ class CSV_Analysis:
             x_target, y_target = altaz2xy(round(row["El"], 2), round(row["Az"], 2))
             ha_target, dec_target = xy2hadec(x_target, y_target, lat)
 
-            # = ha_rot - ha_target
             ha_offset = (ha_rot - ha_target)
 
             dec_offset = dec_rot - dec_target
@@ -318,8 +313,7 @@ if __name__ == "__main__":
 
     #final.add_to_final(peak_index)
     #final.save_final()
-
-
+    
     #graphical = Graphical(added_xy, grid_size)
     #graphical.time_plot()
     #graphical.raster_plot(power_values_grid)

@@ -25,7 +25,7 @@ class RotatorGUI:
 
         main_frame = tk.Frame(root, bg = self.color)
         main_frame.pack(side = "top", fill = "x", padx = 20, pady = 20)
-        
+
         # Build the GUI header and title
         self.data_queue = queue.Queue()
         self.grid_queue = queue.Queue()
@@ -117,7 +117,8 @@ class RotatorGUI:
 
     def on_scan_complete(self):
         self.running = False
-        self.running = False
+        #self.running = False
+        self.scan_active = False
         self.status_label.config(text="Status: Scan Complete")
         self.cancel_button.pack_forget()
         self.start_button.pack()
@@ -194,8 +195,8 @@ class RotatorGUI:
 
         self.SDRangel_host_entry = tk.Entry(entry_frame)
         self.SDRangel_host_entry.pack()
-        #self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
-        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
+        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+        #self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
 
         self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
         self.SDRangel_port_label.pack()
