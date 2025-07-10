@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from xymount import altaz2xy, xy2altaz, hadec2xy, xy2hadec
+import math
 
 class RotatorGUI:
 
@@ -83,6 +84,8 @@ class RotatorGUI:
         grid_size = int(self.grid_entry.get())
         self.build_grid(grid_size)
         selected = self.freq_combo.get()
+        type = self.rose_combo.get()
+        
 
         
         
@@ -93,22 +96,28 @@ class RotatorGUI:
         tolerance = float(self.tol_entry.get())
         spacing = float(self.grid_spacing_entry.get())
         scans = float(self.scan_entry.get())
+        self.k = int(self.k_entry.get())
+        self.target_spacing = float(self.target_spacing_entry.get())
 
         self.build_grid(grid_size)
         self.grid_size = grid_size
         self.spacing = spacing
-
+        
     
         self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue, center_queue = self.center_queue) 
         self.start_button.pack_forget() # Hide the start button and replace with cancel button
         self.cancel_button.pack()
         self.status_label.config(text="Status: Scanning...")
-        self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, selected, on_complete = self.on_scan_complete)
+        if type == 'Square':
+            self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, selected, on_complete = self.on_scan_complete)
+        elif type == 'Rose':
+            self.controller.start_rose_thread(precision, tolerance, scans, self.on_scan_complete)
+        else:
+            print("No raster type specified")
 
-        #self.build_XY_grid(self.main_frame, grid_size, spacing)
+        self.build_rose_graph(self.main_frame, precision, self.k, self.target_spacing)
+
   
-    
-
     def update_gui(self):
         #Checking the queue for data to print about coordinates
 
@@ -234,6 +243,66 @@ class RotatorGUI:
         canvas = FigureCanvasTkAgg(fig, master=parent)  
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+    def build_rose_graph(self, parent, precision, k, target_spacing):
+        #precision = 2
+        #k= 20
+        #target_spacing = 0.05
+
+        #az = self.center_queue.get()*u.deg
+        #el = self.center_queue.get()*u.deg
+
+
+        if k%2  == 0:
+            k = k//2
+            theta = np.linspace(0, 2*math.pi, 5000)
+        else:
+            theta = np.linspace(0, math.pi, 5000)
+
+        r = 1* np.cos(k * theta)
+        x = np.round(r * np.cos(theta), precision)
+        y = np.round(r * np.sin(theta), precision)
+
+        # calculating arc length of the curve
+        dx = np.diff(x) # computes difference between points
+        dy = np.diff(y)
+        dist = np.sqrt(dx**2 + dy**2)
+        arclength = np.insert(np.cumsum(dist), 0, 0) #compute sum of small distances
+        total_length = arclength[-1]
+        num_points = int(total_length//target_spacing)
+        des = np.linspace(0, total_length, num_points)
+
+        x_even = np.interp(des, arclength, x)
+        y_even = np.interp(des, arclength, y)
+
+        coordinates = [[np.round(xi, precision), np.round(yi, precision)] for xi, yi in zip(x_even, y_even)]
+
+        r_vals = np.sqrt(x_even**2 + y_even**2)
+        theta_vals = np.arctan2(y_even, x_even)
+
+        # Plotting
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        ax2 = plt.subplot(1, 2, 2, projection = 'polar')
+
+        # Cartesian plot
+        ax1.plot(x_even, y_even, marker='o', linestyle='-', markersize=3)
+        ax1.set_aspect('equal')
+        ax1.set_title(f'Rose Curve (XY Space) - {k} Petals')
+        ax1.grid(True)
+
+        # Polar plot
+        ax2.plot(theta_vals, r_vals, marker='o', linestyle='-', markersize=3)
+        ax2.set_title(f'Rose Curve (Polar Coordinates) - {k} Petals')
+
+        plt.tight_layout()
+        
+        canvas = FigureCanvasTkAgg(fig, master=parent)  
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+
+
+
 
     def build_XY_grid(self, parent, grid_size, spacing):
         az = self.center_queue.get()*u.deg
@@ -395,13 +464,27 @@ class RotatorGUI:
         self.grid_entry.pack()
         self.grid_entry.insert(0, "5")  # Default value
 
+        self.k_label = tk.Label(entry_frame, text="Number of petals", bg=self.color)
+        self.k_label.pack()
+
+        self.k_entry = tk.Entry(entry_frame)
+        self.k_entry.pack()
+        self.k_entry.insert(0, "10")  # Default value
+
+        self.target_spacing_label = tk.Label(entry_frame, text="Target Spacing", bg=self.color)
+        self.target_spacing_label.pack()
+
+        self.target_spacing_entry = tk.Entry(entry_frame)
+        self.target_spacing_entry.pack()
+        self.target_spacing_entry.insert(0, "0.05")  # Default value
+
         self.SDRangel_host_label = tk.Label(entry_frame, text="Host of SDRangel:", bg=self.color)
         self.SDRangel_host_label.pack()
 
         self.SDRangel_host_entry = tk.Entry(entry_frame)
         self.SDRangel_host_entry.pack()
-        self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
-        #self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
+        #self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
+        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
 
         self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
         self.SDRangel_port_label.pack()
@@ -430,6 +513,17 @@ class RotatorGUI:
         self.tol_entry = tk.Entry(entry_frame)
         self.tol_entry.pack()
         self.tol_entry.insert(0, "0.01")  # Default value
+
+
+        rose_frame = tk.Frame(parent, bg = "#f0f0f0")
+        rose_frame.pack(pady = 10)
+
+        ttk.Label(rose_frame, text = "Set Raster Type:", font=("Helvetica", 11)).grid(row = 0, column = 0, padx = 10)
+
+        self.rose_combo = ttk.Combobox(rose_frame, width=30)
+        self.rose_combo['values'] = ('Square', 'Rose')
+        self.rose_combo.grid(row=0, column=1, padx=10)
+        self.rose_combo.current(0)
 
         
         freq_frame = tk.Frame(parent, bg = "#f0f0f0")

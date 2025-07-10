@@ -7,6 +7,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 
+from excomctld import altaz2hadec
+
 class CSV_Analysis:
 
     def __init__(self, raw_data_path):
@@ -66,7 +68,7 @@ class CSV_Analysis:
         lat = 35.19909314527451
         
         for index, row in df.iterrows():
-
+            '''
             # Convert to XY Coordinates using Lamar's xymount.py code
             x_rot, y_rot = altaz2xy(round(row["El (Rot)"], 2), round(row["Az (Rot)"], 2))
             ha_rot, dec_rot = xy2hadec(x_rot, y_rot, lat)
@@ -78,11 +80,20 @@ class CSV_Analysis:
 
             dec_offset = dec_rot - dec_target
 
+            '''
+            lat = 35.19909314527451
+            ha_target, dec_target = altaz2hadec(row["El"], row["Az"], lat)
+            ha_rot, dec_rot = altaz2hadec(row["El (Rot)"], row["Az (Rot)"], lat)
+            
+            ha_offset = (ha_rot - ha_target)
+
+            dec_offset = dec_rot - dec_target
+
             # Calculate XY Offsets
             #df.loc[index, 'HA_offset'] = round(ha_offset, 2)
             #f.loc[index, 'DEC_offset'] = round(dec_offset, 2)
-            df.loc[index, 'HA_offset'] = round(round(ha_offset / spacing) * spacing, 2)
-            df.loc[index, 'DEC_offset'] = round(round(dec_offset / spacing) * spacing, 2)
+            df.loc[index, 'HA_offset'] = round(ha_offset, 2)#round(round(ha_offset / spacing) * spacing, 2)
+            df.loc[index, 'DEC_offset'] = round(dec_offset, 2)#round(round(dec_offset / spacing) * spacing, 2)
             
             # Add to dataframe
             df.loc[index, 'HA (Rot)'] = ha_rot
@@ -162,7 +173,7 @@ class FinalData:
         
         #grid_size = 7  # Define the size of the grid so it knows how big to make it
         power_values = []
-        power_grid = [[None for _ in range(grid_size)] for _ in range(self.grid_size)]  # Create a square grid
+        power_grid = [[None for _ in range(self.grid_size)] for _ in range(self.grid_size)]  # Create a square grid
 
         coordinates = []
         x = 0
@@ -188,7 +199,7 @@ class FinalData:
                 t += 1
 
         coordinate_index = 0
-        center_offset = (grid_size-1)//2
+        center_offset = (self.grid_size-1)//2
 
         # Iterate through the rows one at a time
         for index, row in self.data.iterrows():
@@ -236,7 +247,7 @@ class FinalData:
 
 
     def save_final(self):
-        self.final_data.to_csv('West-SBand.csv', index = False)
+        self.final_data.to_csv('East-SBand.csv', index = False)
 
 class Graphical:
     
@@ -276,25 +287,26 @@ if __name__ == "__main__":
 
     #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
     #file_path = '/Users/isabe/Downloads/xy_conv2'
-    file_path = '/Users/isabe/Downloads/th'
+    #file_path = '/Users/isabe/Documents/Pointing-Observations/26-East/2025-07-08/2025-07-08-26East-Taurus-A-9x9-0.18-1.csv'
+    
 
-    object_name = "None"
+    object_name = "NA"
 
     #radata = pd.read_csv(file_path)
     #print(radata.head())
-    spacing = 0.1
-
+    spacing = 0.09
 
     analysis = CSV_Analysis(file_path)
-    #extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
-    added_xy = analysis.add_XY_columns(analysis.raw_data.copy())
+    extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
+    print(extracted_rows.head())
+    added_xy = analysis.add_XY_columns(extracted_rows.copy())
     added_HA = analysis.add_HA_columns(added_xy.copy(), spacing)
 
     
 
     print(added_HA.head())
 
-    added_HA.to_csv('te_df.csv', index = False)
+    added_HA.to_csv('HAA_df.csv', index = False)
 
 
     #added_HA.to_csv('HA_offset.csv', index = False)
@@ -304,16 +316,16 @@ if __name__ == "__main__":
 
     #grid_size = analysis.find_grid_size(added_xy)
     #print(grid_size)
-    
-    #file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/West-SBand.csv'
+    #print("grid_size")
+    #file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/East-SBand.csv'
 
     #final = FinalData(added_xy, file_name_2, grid_size, object_name)
     #_, peak_index = final.find_peak()
     #power_values_grid, power_values = final.raster_grid()
 
     #final.add_to_final(peak_index)
-    #final.save_final()
-    
+    #inal.save_final()
+
     #graphical = Graphical(added_xy, grid_size)
     #graphical.time_plot()
     #graphical.raster_plot(power_values_grid)
