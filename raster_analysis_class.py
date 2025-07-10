@@ -92,8 +92,8 @@ class CSV_Analysis:
             # Calculate XY Offsets
             #df.loc[index, 'HA_offset'] = round(ha_offset, 2)
             #f.loc[index, 'DEC_offset'] = round(dec_offset, 2)
-            df.loc[index, 'HA_offset'] = round(ha_offset, 2)#round(round(ha_offset / spacing) * spacing, 2)
-            df.loc[index, 'DEC_offset'] = round(dec_offset, 2)#round(round(dec_offset / spacing) * spacing, 2)
+            df.loc[index, 'HA_offset'] = round(round(ha_offset / spacing) * spacing, 2)
+            df.loc[index, 'DEC_offset'] = round(round(dec_offset / spacing) * spacing, 2)
             
             # Add to dataframe
             df.loc[index, 'HA (Rot)'] = ha_rot
@@ -288,18 +288,18 @@ if __name__ == "__main__":
     #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
     #file_path = '/Users/isabe/Downloads/xy_conv2'
     #file_path = '/Users/isabe/Documents/Pointing-Observations/26-East/2025-07-08/2025-07-08-26East-Taurus-A-9x9-0.18-1.csv'
-    
+    file_path = '/Users/isabe/Downloads/HAA'
 
     object_name = "NA"
 
     #radata = pd.read_csv(file_path)
     #print(radata.head())
-    spacing = 0.09
+    spacing = 0.1
 
     analysis = CSV_Analysis(file_path)
-    extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
-    print(extracted_rows.head())
-    added_xy = analysis.add_XY_columns(extracted_rows.copy())
+    #extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
+    #print(extracted_rows.head())
+    added_xy = analysis.add_XY_columns(analysis.raw_data.copy())
     added_HA = analysis.add_HA_columns(added_xy.copy(), spacing)
 
     

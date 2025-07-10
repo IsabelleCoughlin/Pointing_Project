@@ -110,12 +110,21 @@ class RotatorGUI:
         self.status_label.config(text="Status: Scanning...")
         if type == 'Square':
             self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, selected, on_complete = self.on_scan_complete)
+            if selected == 'El-Az':
+                self.build_empty_grid()
+            elif selected == 'X-Y':
+                self.build_XY_grid(self.main_frame,grid_size, spacing)
+            else:
+                self.build_HA_DEC_grid(self.main_frame,grid_size, spacing)
         elif type == 'Rose':
             self.controller.start_rose_thread(precision, tolerance, scans, self.on_scan_complete)
+            self.build_rose_graph(self.main_frame, precision, self.k, self.target_spacing)
         else:
             print("No raster type specified")
 
-        self.build_rose_graph(self.main_frame, precision, self.k, self.target_spacing)
+        
+
+        #self.build_rose_graph(self.main_frame, precision, self.k, self.target_spacing)
 
   
     def update_gui(self):

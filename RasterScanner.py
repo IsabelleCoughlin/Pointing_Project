@@ -341,6 +341,12 @@ class RotatorController:
         dec_new = dec_target + DECOff
         alt_new, az_new = self.hadec2altaz(ha_new, dec_new, lat)
 
+        az_offset = (az_new - targetAz_raw) % 360
+        if az_offset > 180: 
+            az_offset -= 360
+
+        el_offset = alt_new - targetEl_raw
+
 
         '''
         x_target_raw, y_target_raw = altaz2xy(targetEl_raw, targetAz_raw)
@@ -367,7 +373,7 @@ class RotatorController:
         el_offset = newEl - targetEl_raw
         '''
 
-        return round(az_new, 3), round(alt_new, 3)
+        return round(az_offset, 3), round(el_offset, 3)
 
 
     def update_offsets(self, azOff_new, elOff_new, settings, data, url):
