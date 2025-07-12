@@ -287,8 +287,8 @@ if __name__ == "__main__":
 
     #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
     #file_path = '/Users/isabe/Downloads/xy_conv2'
-    #file_path = '/Users/isabe/Documents/Pointing-Observations/26-East/2025-07-08/2025-07-08-26East-Taurus-A-9x9-0.18-1.csv'
-    file_path = '/Users/isabe/Downloads/HAA'
+    file_path = '/Users/isabe/Documents/Pointing-Observations/26-East/2025-07-08/2025-07-08-26East-Taurus-A-9x9-0.18-1.csv'
+    #file_path = '/Users/isabe/Downloads/HAA'
 
     object_name = "NA"
 
@@ -297,16 +297,16 @@ if __name__ == "__main__":
     spacing = 0.1
 
     analysis = CSV_Analysis(file_path)
-    #extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
+    extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
     #print(extracted_rows.head())
-    added_xy = analysis.add_XY_columns(analysis.raw_data.copy())
-    added_HA = analysis.add_HA_columns(added_xy.copy(), spacing)
+    added_xy = analysis.add_XY_columns(extracted_rows.copy())
+    #added_HA = analysis.add_HA_columns(added_xy.copy(), spacing)
 
     
 
-    print(added_HA.head())
+    #print(added_HA.head())
 
-    added_HA.to_csv('HAA_df.csv', index = False)
+    #added_HA.to_csv('HAA_df.csv', index = False)
 
 
     #added_HA.to_csv('HA_offset.csv', index = False)
@@ -314,21 +314,21 @@ if __name__ == "__main__":
 
 
 
-    #grid_size = analysis.find_grid_size(added_xy)
-    #print(grid_size)
-    #print("grid_size")
-    #file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/East-SBand.csv'
+    grid_size = analysis.find_grid_size(added_xy)
+    print(grid_size)
+    print("grid_size")
+    file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/East-SBand.csv'
 
-    #final = FinalData(added_xy, file_name_2, grid_size, object_name)
-    #_, peak_index = final.find_peak()
-    #power_values_grid, power_values = final.raster_grid()
+    final = FinalData(added_xy, file_name_2, grid_size, object_name)
+    _, peak_index = final.find_peak()
+    power_values_grid, power_values = final.raster_grid()
 
     #final.add_to_final(peak_index)
     #inal.save_final()
 
-    #graphical = Graphical(added_xy, grid_size)
-    #graphical.time_plot()
-    #graphical.raster_plot(power_values_grid)
+    graphical = Graphical(added_xy, grid_size)
+    graphical.time_plot()
+    graphical.raster_plot(power_values_grid)
 
 
 
