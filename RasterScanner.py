@@ -114,6 +114,10 @@ class RotatorController:
     
     def generate_daisy_grid(self, precision, radius, num_petals, spaces):
         '''
+        Method to generate offset list needed for a rose curve raster. The coordinates are a constant distance away from each other
+        wihch was produced by taking an integration of the arclength of the rose. This was modeled based on the provided information
+        by SKYNET: https://www.gb.nrao.edu/20m/map20m_advice.html#raster
+
         The Radius (R) in arcminutes
         The number of petals (Np)
         The Integration time (Tint) in seconds.
@@ -146,7 +150,7 @@ class RotatorController:
 
         coordinates = [[round(xi, precision), round(yi, precision)] for xi, yi in zip(x_even, y_even)]
         
-        return coordinates, x_even, y_even
+        return coordinates#, x_even, y_even
 
     def generate_offsets_grid(self, size, precision, spacing): # From leetcode implementation
         '''
@@ -254,6 +258,9 @@ class RotatorController:
             return None
         
     def XY_offset(self, targetAz_raw, targetEl_raw, xOff, yOff):
+        '''
+        Applying a constant offset in XY coordinate frame using the same coordinates generated in generate_offset_grid()
+        '''
         x_target_raw, y_target_raw = altaz2xy(targetEl_raw, targetAz_raw)
         x_target = round(x_target_raw, 2)
         y_target = round(y_target_raw, 2)
@@ -274,6 +281,10 @@ class RotatorController:
         return round(az_offset, 2), round(el_offset, 2)
     
     def map_offsets_grid(size, precision, spacing):
+        '''
+        Generates an offset grid of coordinates that begin at bottom left and raster vertically to cover a square area with
+        constant grid spacing. 
+        '''
         coordinates = []
         
         array_1 = np.arange(0, size*spacing-spacing, spacing)
@@ -288,17 +299,17 @@ class RotatorController:
                 one = round(one - correction, precision)
                 two = array_2[t]
                 two = round(two - correction, precision)
-
-                #print(array_2[t])
-                #coordinates.append([round(array_1[i], precision), round(array_2[t])])
+                
                 coordinates.append([one, two])
 
             array_2 = array_2[::-1]
         return coordinates
     
-    @staticmethod
+    @staticmethod # Not sure why this must be static but only works with it for now
     def hadec2altaz(ha, dec, lat, ws=False, radian=False):
-
+        '''
+        Method borrowed and augmented from excomctld.py by Lamar Owens.
+        '''
         ha = np.array(ha)
         dec = np.array(dec)
         lat = np.array(lat)
@@ -332,11 +343,18 @@ class RotatorController:
 
     
     def HA_DEC_offsets(self, targetAz_raw, targetEl_raw, HAOff, DECOff):
+        '''
+        Method to apply constant offsets in a HA-DEC reference frame. 
+        '''
 
         #35.19909314527451, -82.87202924351159
         lat = 35.19909314527451
         ha_target, dec_target = altaz2hadec(targetEl_raw, targetAz_raw, lat)
 
+        print(type(dec_target))
+        print(type(ha_target))
+        print(type(DECOff))
+        print(type(HAOff))
         ha_new = ha_target + HAOff
         dec_new = dec_target + DECOff
         alt_new, az_new = self.hadec2altaz(ha_new, dec_new, lat)
@@ -346,32 +364,6 @@ class RotatorController:
             az_offset -= 360
 
         el_offset = alt_new - targetEl_raw
-
-
-        '''
-        x_target_raw, y_target_raw = altaz2xy(targetEl_raw, targetAz_raw)
-        x_target = round(x_target_raw,2)
-        y_target = round(y_target_raw, 2)
-
-        ha_target_raw, dec_target_raw = xy2hadec(x_target, y_target, lat)
-        ha_target = round(ha_target_raw,2)
-        dec_target = round(dec_target_raw,2)
-        ha_new = ha_target + HAOff
-        dec_new = dec_target + DECOff
-
-        x_new_raw, y_new_raw = hadec2xy(ha_new, dec_new, lat)
-        x_new = round(x_new_raw,2)
-        y_new = round(y_new_raw, 2)
-        newEl_raw, newAz_raw = xy2altaz(x_new, y_new)
-        newEl = round(newEl_raw, 2)
-        newAz = round(newAz_raw, 2)
-
-        az_offset = (newAz - targetAz_raw) % 360
-        if az_offset > 180: 
-            az_offset -= 360
-
-        el_offset = newEl - targetEl_raw
-        '''
 
         return round(az_offset, 3), round(el_offset, 3)
 
@@ -419,6 +411,104 @@ class RotatorController:
         except Exception as e:
             print(f"Exception while setting precision: {e}")
 
+    def continue_raster(self, coordinates, precision, tolerance, scan, selected):
+        coord0 = 0
+        coord1 = 0
+        center_checked = False
+        self.cancel_scan = False
+        rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
+
+        self.set_precision(precision, rotator_settings_url)
+        integration_time = self.calculate_integration_time(astronomy_settings_url)
+        payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
+        try: 
+            response = requests.post(astronomy_action_url, json = payload)
+            if response.status_code != 202:
+                print(f"Error starting Radio Astronomy scan: {response.status_code}")
+        except Exception as e:
+            print(f"Exception while starting Radio Astronomy scan: {e}")
+        
+        # Looping through all the coordinates in the grid
+        for coord in coordinates:
+            #xy = False
+
+            if self.cancel_scan:
+                print("Scan Cancelled")
+                break
+
+            settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
+            
+            if not center_checked:
+                self.center_queue.put(targetAz_raw)
+                self.center_queue.put(targetEl_raw)
+                center_checked = True
+
+            if selected == 'HA-DEC':
+                coord0, coord1 = self.HA_DEC_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
+                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
+            elif selected == 'X-Y':
+                coord0, coord1 = self.XY_offset(targetAz_raw, targetEl_raw, coord[0], coord[1])
+                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
+            else:
+                self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
+        
+            correct_coordinates = False
+            while not correct_coordinates:
+
+                settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
+                
+                    
+                
+                if self.cancel_scan:
+                    self.update_offsets(0, 0, settings, data, rotator_settings_url)
+                    break
+
+
+                azOff = round(azOff_raw, precision)
+                elOff = round(elOff_raw, precision)
+
+                currentAz_raw, currentEl_raw, targetAz_raw_1, targetEl_raw_1 = self.get_coordinates(rotator_report_url)
+                
+                currentAz = round(currentAz_raw,precision)
+                currentEl = round(currentEl_raw,precision)
+                targetAz = round(targetAz_raw,precision)
+                targetEl = round(targetEl_raw,precision)
+
+                
+
+                self.data_queue.put("\n")
+                data_1 = f"Offsets in desired system: Azimuth: {coord[0]}, Elevation: {coord[1]}"
+
+                data_5 = f"SDRAngel Offsets: Azimuth: {azOff}, Elevation: {elOff}"
+
+                self.data_queue.put(data_1)
+                self.data_queue.put(data_5)
+
+                data_2 = f"Current Rotator Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}"
+                
+                self.data_queue.put(data_2)
+                data_3 = f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}"
+                self.data_queue.put(data_3)
+                
+
+                if (abs((currentAz_raw - targetAz_raw_1) <= tolerance) and
+                    (abs((currentEl_raw - targetEl_raw_1)) <= tolerance)):
+                    correct_coordinates = True
+                else:
+                    data_4 = "Waiting for the rotator to reach the target coordinates..."
+                    self.data_queue.put(data_4)
+                    
+                    time.sleep(integration_time)
+
+            self.data_queue.put("Rotator on target, performing specified number of scans")
+            time.sleep(integration_time*scan)
+            self.grid_queue.put(coord)
+            
+
+        print("Scan is complete")
+        self.update_offsets(0, 0, settings, data, rotator_settings_url)
+
+
     def start_raster(self, grid_size, precision, tolerance, spacing, scan, selected):
         '''
         Method to begin the raster scan and call all of the other methods. Beigns by generating the necessary URL's to connect to 
@@ -430,217 +520,18 @@ class RotatorController:
         proceeds to the next commanded offset. 
 
         '''
-        #'El-Az', 'HA-DEC', "X-Y"
-        coord0 = 0
-        coord1 = 0
-        center_checked = False
-        self.cancel_scan = False
-        rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
         coordinates = self.generate_offsets_grid(grid_size, precision, spacing)
+        self.continue_raster(coordinates, precision, tolerance, scan, selected)
         
-        self.set_precision(precision, rotator_settings_url)
-        integration_time = self.calculate_integration_time(astronomy_settings_url)
-        payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
-        try: 
-            response = requests.post(astronomy_action_url, json = payload)
-            if response.status_code != 202:
-                print(f"Error starting Radio Astronomy scan: {response.status_code}")
-        except Exception as e:
-            print(f"Exception while starting Radio Astronomy scan: {e}")
-        
-        # Looping through all the coordinates in the grid
-        for coord in coordinates:
-            #xy = False
-
-            if self.cancel_scan:
-                print("Scan Cancelled")
-                break
-
-            settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
-            
-            if not center_checked:
-                self.center_queue.put(targetAz_raw)
-                self.center_queue.put(targetEl_raw)
-                center_checked = True
-
-            if selected == 'HA-DEC':
-                coord0, coord1 = self.HA_DEC_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
-                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
-            elif selected == 'X-Y':
-                coord0, coord1 = self.XY_offset(targetAz_raw, targetEl_raw, coord[0], coord[1])
-                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
-            else:
-                self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
-        
-            correct_coordinates = False
-            while not correct_coordinates:
-
-                settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
-                
-                    
-                
-                if self.cancel_scan:
-                    self.update_offsets(0, 0, settings, data, rotator_settings_url)
-                    break
-
-
-                azOff = round(azOff_raw, precision)
-                elOff = round(elOff_raw, precision)
-
-                currentAz_raw, currentEl_raw, targetAz_raw_1, targetEl_raw_1 = self.get_coordinates(rotator_report_url)
-                
-                currentAz = round(currentAz_raw,precision)
-                currentEl = round(currentEl_raw,precision)
-                targetAz = round(targetAz_raw,precision)
-                targetEl = round(targetEl_raw,precision)
-
-                
-
-                self.data_queue.put("\n")
-                data_1 = f"Offsets in desired system: Azimuth: {coord[0]}, Elevation: {coord[1]}"
-
-                data_5 = f"SDRAngel Offsets: Azimuth: {azOff}, Elevation: {elOff}"
-
-                self.data_queue.put(data_1)
-                self.data_queue.put(data_5)
-
-                data_2 = f"Current Rotator Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}"
-                
-                self.data_queue.put(data_2)
-                data_3 = f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}"
-                self.data_queue.put(data_3)
-                
-
-                if (abs((currentAz_raw - targetAz_raw_1) <= tolerance) and
-                    (abs((currentEl_raw - targetEl_raw_1)) <= tolerance)):
-                    correct_coordinates = True
-                else:
-                    data_4 = "Waiting for the rotator to reach the target coordinates..."
-                    self.data_queue.put(data_4)
-                    
-                    time.sleep(integration_time)
-
-            self.data_queue.put("Rotator on target, performing specified number of scans")
-            time.sleep(integration_time*scan)
-            self.grid_queue.put(coord)
-            
-
-        print("Scan is complete")
-        self.update_offsets(0, 0, settings, data, rotator_settings_url)
 
     def start_rose(self, precision, tolerance, scan):
         '''
-        Method to begin the raster scan and call all of the other methods. Beigns by generating the necessary URL's to connect to 
-        REST API, generating the offset scanning coordinates, patching the precision to SDRAngel, and calculating the integration time. 
-
-        Continues to start a scan through the Radio Astronomy plugin, and begin a loop through all of the offset coordinate pairs. It compares
-        the current and commanded positions of the rotator and remains commanded to the same position and offsets until they are 
-        at or below the tolerace given. Once it has reached target, the code waits the total integration time for the final scan of that position, and
-        proceeds to the next commanded offset. 
-
+        
         '''
-        
-        coord0 = 0
-        coord1 = 0
-        center_checked = False
-        self.cancel_scan = False
-        rotator_settings_url, astronomy_settings_url, astronomy_action_url, rotator_report_url = self.get_urls()
-        radius = 1
-        num_points = 10
-        spaces = 4
-        coordinates = self.generate_daisy_grid(precision,radius, num_points, spaces)
-        
-        self.set_precision(precision, rotator_settings_url)
-        integration_time = self.calculate_integration_time(astronomy_settings_url)
-        payload = {"channelType": "RadioAstronomy",  "direction": 0, "RadioAstronomyActions": { "start": {"sampleRate": 2000000} }}
-        try: 
-            response = requests.post(astronomy_action_url, json = payload)
-            if response.status_code != 202:
-                print(f"Error starting Radio Astronomy scan: {response.status_code}")
-        except Exception as e:
-            print(f"Exception while starting Radio Astronomy scan: {e}")
+        coordinates = self.generate_daisy_grid(precision,1, 5, 0.01)
+        selected = 'EL-AZ'
+        self.continue_raster(coordinates, precision, tolerance, scan, selected)
 
-        
-        
-        # Looping through all the coordinates in the grid
-        for coord in coordinates:
-            #xy = False
-
-            if self.cancel_scan:
-                print("Scan Cancelled")
-                break
-
-            settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
-            
-            if not center_checked:
-                self.center_queue.put(targetAz_raw)
-                self.center_queue.put(targetEl_raw)
-                center_checked = True
-
-            if selected == 'HA-DEC':
-                coord0, coord1 = self.HA_DEC_offsets(targetAz_raw, targetEl_raw, coord[0], coord[1])
-                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
-            elif selected == 'X-Y':
-                coord0, coord1 = self.XY_offset(targetAz_raw, targetEl_raw, coord[0], coord[1])
-                self.update_offsets(coord0, coord1, settings, data, rotator_settings_url)
-            else:
-                self.update_offsets(coord[0], coord[1], settings, data, rotator_settings_url)
-        
-            correct_coordinates = False
-            while not correct_coordinates:
-
-                settings, data, targetAz_raw, targetEl_raw, azOff_raw, elOff_raw = self.get_rotator_settings(rotator_settings_url)
-                
-                    
-                
-                if self.cancel_scan:
-                    self.update_offsets(0, 0, settings, data, rotator_settings_url)
-                    break
-
-
-                azOff = round(azOff_raw, precision)
-                elOff = round(elOff_raw, precision)
-
-                currentAz_raw, currentEl_raw, targetAz_raw_1, targetEl_raw_1 = self.get_coordinates(rotator_report_url)
-                
-                currentAz = round(currentAz_raw,precision)
-                currentEl = round(currentEl_raw,precision)
-                targetAz = round(targetAz_raw,precision)
-                targetEl = round(targetEl_raw,precision)
-
-                
-
-                self.data_queue.put("\n")
-                data_1 = f"Offsets in desired system: Azimuth: {coord[0]}, Elevation: {coord[1]}"
-
-                data_5 = f"SDRAngel Offsets: Azimuth: {azOff}, Elevation: {elOff}"
-
-                self.data_queue.put(data_1)
-                self.data_queue.put(data_5)
-
-                data_2 = f"Current Rotator Coordinates: Azimuth: {currentAz}, Elevation: {currentEl}"
-                
-                self.data_queue.put(data_2)
-                data_3 = f"Target Coordinates: Azimuth: {targetAz}, Elevation: {targetEl}"
-                self.data_queue.put(data_3)
-                
-
-                if (abs((currentAz_raw - targetAz_raw_1) <= tolerance) and
-                    (abs((currentEl_raw - targetEl_raw_1)) <= tolerance)):
-                    correct_coordinates = True
-                else:
-                    data_4 = "Waiting for the rotator to reach the target coordinates..."
-                    self.data_queue.put(data_4)
-                    
-                    time.sleep(integration_time)
-
-            self.data_queue.put("Rotator on target, performing specified number of scans")
-            time.sleep(integration_time*scan)
-            self.grid_queue.put(coord)
-            
-
-        print("Scan is complete")
-        self.update_offsets(0, 0, settings, data, rotator_settings_url)
 
     def start_scan_thread(self, grid_size, precision, tolerance, spacing, scan, selected, on_complete = None):
         self.cancel_scan = False
@@ -672,8 +563,8 @@ if __name__ == "__main__":
 
     rotator = RotatorController(host, port, data_queue, grid_queue, center_queue)
 
-    rotator.start_raster(grid_size, precision, tolerance, spacing, scan, selected)
-    #rotator.start_rose(precision, tolerance, scan)
+    #rotator.start_raster(grid_size, precision, tolerance, spacing, scan, selected)
+    rotator.start_rose(precision, tolerance, scan)
             
 
 

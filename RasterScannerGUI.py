@@ -37,7 +37,8 @@ class RotatorGUI:
         self.build_title()
 
         self.main_frame = tk.Frame(root, bg = self.color)
-        self.main_frame.pack(side = "top", fill = "x", padx = 20, pady = 20)
+        self.main_frame.pack(fill = "both", expand = True)
+
 
         # Build the GUI header and title
         self.data_queue = queue.Queue()
@@ -49,6 +50,10 @@ class RotatorGUI:
         The following should all be on the left
         '''
 
+        self.selection = tk.StringVar()
+        self.build_selector()
+
+        '''
         self.build_entries(self.main_frame)
         self.build_empty_grid(self.main_frame)
         
@@ -67,6 +72,83 @@ class RotatorGUI:
         self.text_widget.pack()
 
         self.update_gui()
+        '''
+    def build_selector(self):
+        """Builds the initial combo selection screen"""
+        self.selector_frame = tk.Frame(self.root, bg=self.color)
+        self.selector_frame.pack(pady=30)
+
+        label = tk.Label(self.selector_frame, text="Choose Scan Type:", bg=self.color)
+        label.pack(pady=5)
+
+        self.combo = ttk.Combobox(
+            self.selector_frame, textvariable=self.selection, state="readonly"
+        )
+        self.combo['values'] = ["Square", "Spiral", "Rose"]
+        self.combo.pack(pady=5)
+
+        continue_button = tk.Button(
+            self.selector_frame, text="Continue", command=self.on_selection
+        )
+        continue_button.pack(pady=10)
+
+    def on_selection(self):
+        """Triggered when user selects a scan type and clicks continue"""
+        choice = self.selection.get()
+        if not choice:
+            return  # Prevent continuing without a selection
+
+        self.selector_frame.pack_forget()  # Hide the initial screen
+
+        self.main_frame = tk.Frame(self.root, bg=self.color)
+        self.main_frame.pack(side="top", fill="x", padx=20, pady=20)
+
+
+        self.left_frame = tk.Frame(self.main_frame, bg = self.color)
+        self.left_frame.pack(side = "left", fill = "y", padx = 10, pady = 10)
+
+        self.right_frame = tk.Frame(self.main_frame, bg = self.color)
+        self.right_frame.pack(side = "right", fill = "both", expand = True, padx = 10, pady = 10)
+
+        #self.build_header()
+        #self.build_title()
+
+        required_fields = {
+            "Standard": ["Grid Size", "Host", "Port", "Precision", "Spacing", "Tolerance", "Frame", "Scans"],
+            "Rose": ["Radius","Number Petals", "Target Spacing", "Host", "Port", "Precision", "Tolerance", "Frame", "Scans"]
+        }
+
+        # Conditional logic for different entry builder
+        if choice == "Spiral":
+            self.build_entries_standard(self.left_frame, required_fields["Standard"])
+            self.build_empty_grid(self.right_frame)
+        elif choice == "Square":
+            self.build_entries_standard(self.left_frame, required_fields["Standard"])
+            self.build_empty_grid(self.right_frame)
+        else: 
+            self.build_entries_rose(self.main_frame, required_fields["Rose"])
+            #self.build_empty_grid(self.right_frame)
+
+
+        
+
+        # Remaining GUI elements
+        print("Packing start button")
+        self.start_button = tk.Button(self.left_frame, text="Start Scan", command=self.start_scan)
+        self.start_button.pack()
+
+        self.status_label = tk.Label(self.left_frame, text="Status: Idle", bg=self.color)
+        self.status_label.pack()
+
+        self.cancel_button = tk.Button(self.left_frame, text="Cancel Scan", command=self.cancel_scan)
+        self.cancel_button.pack()
+        self.cancel_button.pack_forget()
+
+        self.text_widget = tk.Text(self.root, height=15, width=100)
+        self.text_widget.pack()
+
+        self.update_gui()
+
 
     def start_scan(self):
         """
@@ -80,52 +162,63 @@ class RotatorGUI:
         self.data_queue.queue.clear()           # Flush leftover data
         self.grid_queue.queue.clear()
         self.center_queue.queue.clear()
-        self.canvas.delete("all")               # Clear canvas before redrawing
-        grid_size = int(self.grid_entry.get())
-        self.build_grid(grid_size)
-        selected = self.freq_combo.get()
-        type = self.rose_combo.get()
-        
+                     # Clear canvas before redrawing
 
-        
-        
-        grid_size = int(self.grid_entry.get())
-        host = self.SDRangel_host_entry.get()
-        port = int(self.SDRangel_port_entry.get())
-        precision = int(self.precision_entry.get())
-        tolerance = float(self.tol_entry.get())
-        spacing = float(self.grid_spacing_entry.get())
-        scans = float(self.scan_entry.get())
-        self.k = int(self.k_entry.get())
-        self.target_spacing = float(self.target_spacing_entry.get())
-
-        self.build_grid(grid_size)
-        self.grid_size = grid_size
-        self.spacing = spacing
-        
     
-        self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue, center_queue = self.center_queue) 
-        self.start_button.pack_forget() # Hide the start button and replace with cancel button
-        self.cancel_button.pack()
-        self.status_label.config(text="Status: Scanning...")
-        if type == 'Square':
-            self.controller.start_scan_thread(grid_size, precision, tolerance, spacing, scans, selected, on_complete = self.on_scan_complete)
+
+        selected = self.entries["Frame"].get()
+        self.type = self.combo.get()
+
+        
+        if self.type == 'Square' or self.type == 'Spiral':
+
+            self.canvas.delete("all")  
+            self.grid_size = int(self.entries["Grid Size"].get())
+            self.build_grid(self.grid_size)
+            host = self.entries["Host"].get()
+            port = int(self.entries["Port"].get())
+            precision = int(self.entries["Precision"].get())
+            self.spacing = float(self.entries["Spacing"].get())
+            tolerance = float(self.entries["Tolerance"].get())
+            scans = float(self.entries["Scans"].get())
+
+            self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue, center_queue = self.center_queue) 
+            self.start_button.pack_forget() # Hide the start button and replace with cancel button
+            self.cancel_button.pack()
+            self.status_label.config(text="Status: Scanning...")
+            
+            self.controller.start_scan_thread(self.grid_size, precision, tolerance, self.spacing, scans,selected, on_complete = self.on_scan_complete)
+
             if selected == 'El-Az':
-                self.build_empty_grid()
+                self.build_empty_grid(self.right_frame)
             elif selected == 'X-Y':
-                self.build_XY_grid(self.main_frame,grid_size, spacing)
+                self.build_XY_grid(self.right_frame,self.grid_size, self.spacing)
             else:
-                self.build_HA_DEC_grid(self.main_frame,grid_size, spacing)
-        elif type == 'Rose':
+                self.build_HA_DEC_grid(self.right_frame,self.grid_size, self.spacing)
+        elif self.type == 'Rose':
+
+            radius = float(self.entries["Radius"].get())
+            
+            petals = int(self.entries["Number Petals"].get())
+            self.spacing = float(self.entries["Target Spacing"].get())
+            host = self.entries["Host"].get()
+            port = int(self.entries["Port"].get())
+            precision = int(self.entries["Precision"].get())
+            tolerance = float(self.entries["Tolerance"].get())
+            scans = float(self.entries["Scans"].get())
+            self.grid_size = int(self.spacing*radius)
+            #print(self.grid_size)
+            #self.build_grid(self.grid_size+1)
+
+            self.controller = RotatorController(host, port, data_queue=self.data_queue, grid_queue = self.grid_queue, center_queue = self.center_queue) 
+            self.start_button.pack_forget() # Hide the start button and replace with cancel button
+            self.cancel_button.pack()
+            self.status_label.config(text="Status: Scanning...")
+            
             self.controller.start_rose_thread(precision, tolerance, scans, self.on_scan_complete)
-            self.build_rose_graph(self.main_frame, precision, self.k, self.target_spacing)
+            self.build_rose_graph(self.right_frame, precision, petals, self.spacing)
         else:
             print("No raster type specified")
-
-        
-
-        #self.build_rose_graph(self.main_frame, precision, self.k, self.target_spacing)
-
   
     def update_gui(self):
         #Checking the queue for data to print about coordinates
@@ -138,7 +231,8 @@ class RotatorGUI:
         if self.running:
             while not self.grid_queue.empty():
                 next_coord = self.grid_queue.get()
-                self.fill_grid_space(next_coord)
+                if self.type != "Rose":
+                    self.fill_grid_space(next_coord)
         
         self.root.after(1, self.update_gui)
 
@@ -254,13 +348,6 @@ class RotatorGUI:
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
     def build_rose_graph(self, parent, precision, k, target_spacing):
-        #precision = 2
-        #k= 20
-        #target_spacing = 0.05
-
-        #az = self.center_queue.get()*u.deg
-        #el = self.center_queue.get()*u.deg
-
 
         if k%2  == 0:
             k = k//2
@@ -272,8 +359,8 @@ class RotatorGUI:
         x = np.round(r * np.cos(theta), precision)
         y = np.round(r * np.sin(theta), precision)
 
-        # calculating arc length of the curve
-        dx = np.diff(x) # computes difference between points
+        # calculating the arc length of the curve
+        dx = np.diff(x) # computes the difference between points
         dy = np.diff(y)
         dist = np.sqrt(dx**2 + dy**2)
         arclength = np.insert(np.cumsum(dist), 0, 0) #compute sum of small distances
@@ -290,8 +377,8 @@ class RotatorGUI:
         theta_vals = np.arctan2(y_even, x_even)
 
         # Plotting
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        ax2 = plt.subplot(1, 2, 2, projection = 'polar')
+        fig, ax1 = plt.subplots(1, 1, figsize=(12, 5))
+        #ax2 = plt.subplot(1, 2, 2, projection = 'polar')
 
         # Cartesian plot
         ax1.plot(x_even, y_even, marker='o', linestyle='-', markersize=3)
@@ -299,19 +386,11 @@ class RotatorGUI:
         ax1.set_title(f'Rose Curve (XY Space) - {k} Petals')
         ax1.grid(True)
 
-        # Polar plot
-        ax2.plot(theta_vals, r_vals, marker='o', linestyle='-', markersize=3)
-        ax2.set_title(f'Rose Curve (Polar Coordinates) - {k} Petals')
-
         plt.tight_layout()
         
         canvas = FigureCanvasTkAgg(fig, master=parent)  
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-
-
-
 
     def build_XY_grid(self, parent, grid_size, spacing):
         az = self.center_queue.get()*u.deg
@@ -334,17 +413,11 @@ class RotatorGUI:
         x_vals = np.arange(x_start, x_end, spacing)
         y_vals = np.arange(y_start, y_end, spacing)
 
-        
-
-        # Grid arrays
-        #x_vals = np.radians(np.arange(x_start, x_end, spacing))  # In radians
-        #y_vals = np.arange(y_start, y_end, spacing) * u.deg
-
         X, Y = np.meshgrid(x_vals, y_vals)
 
         alt_vals, az_vals = xy2altaz(X,Y)
-        print(alt_vals)
-        print(az_vals)
+        #print(alt_vals)
+        #print(az_vals)
 
         alt_flat = alt_vals.flatten()
         az_flat_deg = az_vals.flatten()
@@ -379,55 +452,6 @@ class RotatorGUI:
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-
-
-
-
-        # Convert HA back to RA
-        #RA = Longitude(lst - HA * u.rad, wrap_angle=360 * u.deg)
-
-        # SkyCoord for projection
-        #coords = SkyCoord(ra=RA.flatten(), dec=DEC.flatten(), frame='icrs')
-        #altaz_frame = AltAz(obstime=obstime, location=location)
-        #altaz_coords = coords.transform_to(altaz_frame)
-
-        # Reshape for plotting
-        #ALT = altaz_coords.alt.deg.reshape(DEC.shape)
-        #AZ = altaz_coords.az.deg.reshape(DEC.shape)
-
-        # Plot
-        #plt.figure(figsize=(8, 6))
-        '''
-        fig = Figure(figsize=(5, 4), dpi=100)
-
-        ax = fig.add_subplot(111)  # Add a subplot to the figure
-
-        # Plot grid lines
-        for i in range(ALT.shape[0]):
-            ax.plot(AZ[i], ALT[i], 'b-', label='Dec Grid' if i == 0 else "")
-        for j in range(ALT.shape[1]):
-            ax.plot(AZ[:, j], ALT[:, j], 'r--', label='HA Grid' if j == 0 else "")
-
-        grid_limits = grid_size*spacing/5#+ 3*spacing
-
-        # Set labels and limits
-        ax.set_xlabel('Azimuth (°)')
-        ax.set_ylabel('Elevation (°)')
-        ax.set_title('HA/Dec Grid Projected to Az/El')
-        ax.grid(True)
-        ax.legend()
-        ax.set_xlim(AZ.min() - grid_limits, AZ.max() + grid_limits)
-        ax.set_ylim(ALT.min() - grid_limits, ALT.max() + grid_limits)
-        
-
-
-        canvas = FigureCanvasTkAgg(fig, master=parent)  
-        canvas_widget = canvas.get_tk_widget()
-        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        '''
-        
-
-
     def fill_grid_space(self, coord):
 
         center_offset = ((self.grid_size - 1)//2)
@@ -443,10 +467,7 @@ class RotatorGUI:
         x2 = x1 + cell_size
         y2 = y1 + cell_size
 
-        # Draw a rectangle to fill the cell
         self.canvas.create_rectangle(x1, y1, x2, y2, fill="yellow", outline="black")
-
-
 
     def build_grid(self, grid_size):
         self.canvas.delete("all")
@@ -460,97 +481,78 @@ class RotatorGUI:
             y = i*cell_size
             self.canvas.create_line(0, y, canvas_size, y, fill = "black")
 
-    def build_entries(self, parent):
+    def build_entries_standard(self, parent, fields):
 
-        # Create a frame
-        entry_frame = tk.Frame(parent)
-        entry_frame.pack(side = "left", anchor = "nw", padx = 20, pady = 20)
+        self.entries = {}
 
-        self.grid_label = tk.Label(entry_frame, text="Grid Size: Should be odd", bg=self.color)
-        self.grid_label.pack()
+        combo_fields = {
+            "Frame": ["EL-AZ", "X-Y", "HA-DEC"]
+        }
 
-        self.grid_entry = tk.Entry(entry_frame)
-        self.grid_entry.pack()
-        self.grid_entry.insert(0, "5")  # Default value
+        # "10.1.119.129"
+        default_values = {
+            "Grid Size": "5",
+            "Host": "204.84.22.107",
+            "Port": "8091",
+            "Precision": "2",
+            "Spacing": "0.1",
+            "Tolerance": "0.01",
+            "Frame": "EL-AZ",
+            "Scans": "5"
+        }
 
-        self.k_label = tk.Label(entry_frame, text="Number of petals", bg=self.color)
-        self.k_label.pack()
+        for field in fields:
+            tk.Label(parent, text=field).pack()
 
-        self.k_entry = tk.Entry(entry_frame)
-        self.k_entry.pack()
-        self.k_entry.insert(0, "10")  # Default value
-
-        self.target_spacing_label = tk.Label(entry_frame, text="Target Spacing", bg=self.color)
-        self.target_spacing_label.pack()
-
-        self.target_spacing_entry = tk.Entry(entry_frame)
-        self.target_spacing_entry.pack()
-        self.target_spacing_entry.insert(0, "0.05")  # Default value
-
-        self.SDRangel_host_label = tk.Label(entry_frame, text="Host of SDRangel:", bg=self.color)
-        self.SDRangel_host_label.pack()
-
-        self.SDRangel_host_entry = tk.Entry(entry_frame)
-        self.SDRangel_host_entry.pack()
-        #self.SDRangel_host_entry.insert(0, "10.1.119.129")  # Default value
-        self.SDRangel_host_entry.insert(0, "204.84.22.107")  # Default value
-
-        self.SDRangel_port_label = tk.Label(entry_frame, text="Port of SDRangel:", bg=self.color)
-        self.SDRangel_port_label.pack()
-
-        self.SDRangel_port_entry = tk.Entry(entry_frame)
-        self.SDRangel_port_entry.pack()
-        self.SDRangel_port_entry.insert(0, "8091")  # Default value
-
-        self.precision_label = tk.Label(entry_frame, text="Precision (how many after decimal):", bg=self.color)
-        self.precision_label.pack()
-
-        self.precision_entry = tk.Entry(entry_frame)
-        self.precision_entry.pack()
-        self.precision_entry.insert(0, "2")  # Default value
-
-        self.grid_spacing_label = tk.Label(entry_frame, text="Grid Spacing:", bg=self.color)
-        self.grid_spacing_label.pack()
-
-        self.grid_spacing_entry = tk.Entry(entry_frame)
-        self.grid_spacing_entry.pack()
-        self.grid_spacing_entry.insert(0, "0.1")  # Default value
-
-        self.tol_label = tk.Label(entry_frame, text="Tolerance (for comparison, not SDRAngel):",  bg=self.color)
-        self.tol_label.pack()
-
-        self.tol_entry = tk.Entry(entry_frame)
-        self.tol_entry.pack()
-        self.tol_entry.insert(0, "0.01")  # Default value
+            if field in combo_fields:
+                combo = ttk.Combobox(parent, values=combo_fields[field], state="readonly")
+                combo.pack()
+                # Set default if available
+                combo.set(default_values.get(field, combo_fields[field][0]))
+                self.entries[field] = combo
+            else:
+                entry = tk.Entry(parent)
+                entry.pack()
+                if field in default_values:
+                    entry.insert(0, default_values[field])
+                self.entries[field] = entry
 
 
-        rose_frame = tk.Frame(parent, bg = "#f0f0f0")
-        rose_frame.pack(pady = 10)
+    def build_entries_rose(self, parent, fields):
 
-        ttk.Label(rose_frame, text = "Set Raster Type:", font=("Helvetica", 11)).grid(row = 0, column = 0, padx = 10)
+        self.entries = {}
 
-        self.rose_combo = ttk.Combobox(rose_frame, width=30)
-        self.rose_combo['values'] = ('Square', 'Rose')
-        self.rose_combo.grid(row=0, column=1, padx=10)
-        self.rose_combo.current(0)
+        combo_fields = {
+            "Frame": ["EL-AZ", "X-Y", "HA-DEC"]
+        }
 
-        
-        freq_frame = tk.Frame(parent, bg = "#f0f0f0")
-        freq_frame.pack(pady = 10)
+        default_values = {
+            "Radius": "5",
+            "Number Petals": "4",
+            "Target Spacing": "0.1",
+            "Host": "204.84.22.107",
+            "Port": "8091",
+            "Precision": "2",
+            "Tolerance": "0.01",
+            "Frame": "EL-AZ",
+            "Scans": "5"
+        }
 
-        ttk.Label(freq_frame, text = "Set Standard Frame:", font=("Helvetica", 11)).grid(row = 0, column = 0, padx = 10)
+        for field in fields:
+            tk.Label(parent, text=field).pack()
 
-        self.freq_combo = ttk.Combobox(freq_frame, width=30)
-        self.freq_combo['values'] = ('El-Az', 'HA-DEC', 'X-Y')
-        self.freq_combo.grid(row=0, column=1, padx=10)
-        self.freq_combo.current(0)
-
-        self.scan_label = tk.Label(entry_frame, text="Number of Scans once on target:",  bg=self.color)
-        self.scan_label.pack()
-
-        self.scan_entry = tk.Entry(entry_frame)
-        self.scan_entry.pack()
-        self.scan_entry.insert(0, "5")  # Default value
+            if field in combo_fields:
+                combo = ttk.Combobox(parent, values=combo_fields[field], state="readonly")
+                combo.pack()
+                # Set default if available
+                combo.set(default_values.get(field, combo_fields[field][0]))
+                self.entries[field] = combo
+            else:
+                entry = tk.Entry(parent)
+                entry.pack()
+                if field in default_values:
+                    entry.insert(0, default_values[field])
+                self.entries[field] = entry
 
     def build_header(self):
         header_frame = tk.Frame(self.root, bg="lightgreen")
