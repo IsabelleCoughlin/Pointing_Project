@@ -163,6 +163,7 @@ class FinalData:
         '''
         #data = pd.read_csv(data_path)
         self.data = data
+        self.final_data_path = final_data_path
         final_data = pd.read_csv(final_data_path)
         self.final_data = final_data
         self.grid_size = grid_size
@@ -231,7 +232,7 @@ class FinalData:
 
         return peak_power, peak_index
     
-    def add_to_final(self, peak_index):
+    def add_XY_to_final(self, peak_index):
 
         #self.final_data.loc[len(self.final_data)] = [self.object_name, self.data.loc[peak_index,"X (Rot)"], self.data.loc[peak_index,"Y (Rot)"], self.data.loc[peak_index,"X (Target)"], self.data.loc[peak_index,"Y (Target)"], self.data.loc[peak_index,"X_offset"], self.data.loc[peak_index,"Y_offset"]]
         row = self.data.iloc[peak_index]  # ✅ get row by position
@@ -245,9 +246,21 @@ class FinalData:
             row["Y_offset"]
         ]
 
+    def add_HADEC_to_final(self, peak_index):
+
+        row = self.data.iloc[peak_index]
+        self.final_data.loc[len(self.final_data)] = [
+            self.object_name,
+            row["Az (Rot)"],
+            row["El (Rot)"],
+            row["Az"],
+            row["El"],
+            row["Az Off (Rot)"],
+            row["El Off (Rot)"]
+        ]
 
     def save_final(self):
-        self.final_data.to_csv('East-SBand.csv', index = False)
+        self.final_data.to_csv(self.final_data_path, index = False)
 
 class Graphical:
     
@@ -285,48 +298,25 @@ class Graphical:
 
 if __name__ == "__main__":
 
-    #file_path = '/Users/isabe/Downloads/2025-06-27-observations/2025-06-27-26East-Cass-A-4.csv'
-    #file_path = '/Users/isabe/Downloads/xy_conv2'
-    file_path = '/Users/isabe/Documents/Pointing-Observations/26-East/2025-07-08/2025-07-08-26East-Taurus-A-9x9-0.18-1.csv'
-    #file_path = '/Users/isabe/Downloads/HAA'
+    file_path = '' # Add in the path to your file
 
-    object_name = "NA"
-
-    #radata = pd.read_csv(file_path)
-    #print(radata.head())
-    spacing = 0.1
+    object_name = "NA" # Add the object name
 
     analysis = CSV_Analysis(file_path)
     extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
-    #print(extracted_rows.head())
-    added_xy = analysis.add_XY_columns(extracted_rows.copy())
-    #added_HA = analysis.add_HA_columns(added_xy.copy(), spacing)
+    print(extracted_rows.head()) # Shows what is happening after deleting unimportant rows
 
-    
+    grid_size = analysis.find_grid_size(extracted_rows) # Find the grid size
 
-    #print(added_HA.head())
-
-    #added_HA.to_csv('HAA_df.csv', index = False)
-
-
-    #added_HA.to_csv('HA_offset.csv', index = False)
-
-
-
-
-    grid_size = analysis.find_grid_size(added_xy)
-    print(grid_size)
-    print("grid_size")
-    file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/East-SBand.csv'
-
-    final = FinalData(added_xy, file_name_2, grid_size, object_name)
-    _, peak_index = final.find_peak()
+    file_name_2 = 'file_path.../Pulsars.csv' # Fix the file path for saving
+    final = FinalData(extracted_rows, file_name_2, grid_size, object_name)
+    _, peak_index = final.find_peak()# Finds out where the peak is
     power_values_grid, power_values = final.raster_grid()
+  
+    final.add_HADEC_to_final(peak_index) # Adds to new file
+    final.save_final()
 
-    #final.add_to_final(peak_index)
-    #inal.save_final()
-
-    graphical = Graphical(added_xy, grid_size)
+    graphical = Graphical(extracted_rows, grid_size)
     graphical.time_plot()
     graphical.raster_plot(power_values_grid)
 
