@@ -10,7 +10,7 @@ import numpy as np
 import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
-import excomctld-20191007
+from excomctld-20191007 import excomm
 
 
 class DFMClass:
