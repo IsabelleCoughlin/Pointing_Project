@@ -60,7 +60,10 @@ class DFMClass:
                 dfm_status = rotor.get_status()
                 rotor.print_status(dfm_status)
                 rotor.slew(ra_target, dec_target)
-                time.sleep(1)
+                time.sleep(2)
+                dfm_status = rotor.get_status()
+                rotor.print_status(dfm_status)
+                
                 while dfm_status[DFM_NEXTOBJ]:
                     dfm_status = rotor.get_status()
                     rotor.print_status(dfm_status)
