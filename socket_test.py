@@ -109,7 +109,7 @@ if __name__ == '__main__':
     rotor = DFM_FE(args.dfm_ip, args.dfm_port)
     
     # Open DFM_Data.csv - where the time/position data will be saved
-    file_path = os.get_cwd() + '/DFM_Data.csv' # Fix the file path for saving
+    file_path = os.getcwd() + '/DFM_Data.csv' # Fix the file path for saving
     # Testing variables
     center_pos = [50, 50]
     spacing = 0.09
