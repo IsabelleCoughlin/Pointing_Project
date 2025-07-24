@@ -100,8 +100,8 @@ if __name__ == '__main__':
     parser.add_argument('--dfm_ip',          type=str,   default='10.5.1.2', help='DFM EXCOMM IP Address')
     parser.add_argument('--ra', type=float, default=0.0, help='Slew Right Ascension (Hours)')
     parser.add_argument('--dec', type=float, default=0.0, help='Slew Declination')
-    parser.add_argument('--spacing',          type=str,   default='0.09', help='Spacing')
-    parser.add_argument('--grid_size',          type=str,   default='5', help='Grid Size')
+    parser.add_argument('--spacing',          type=float,   default=0.09, help='Spacing')
+    parser.add_argument('--grid_size',          type=float,   default=5, help='Grid Size')
 
     args = parser.parse_args()
 
