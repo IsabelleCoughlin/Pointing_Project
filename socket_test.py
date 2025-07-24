@@ -61,18 +61,18 @@ class DFMClass:
                     rotor.print_status(dfm_status)
                     time.sleep(5) # Wait 5 seconds until next check
                 # Do not continue until it the slew is done
-                time = datetime.now(timezone.utc)
+                time_date = datetime.now(timezone.utc)
                 ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current = rotor.get_position()
                 # Double check that it is on target at correct coordinate
                 if abs(ra_current - ra_target) > 0.01: # Can also change to set the tolerance
                     offTarget = False
                     print("Target not reached, retrying slew command")
-            self.add_to_CSV(time, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current)
+            self.add_to_CSV(time_date, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current)
             time.sleep(1) # Also replace with integration time
             for i in range(4): # Completes 5 scans in the same place
                 ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current = rotor.get_position()
-                time = datetime.now(timezone.utc)
-                self.add_to_CSV(time, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current)
+                time_date = datetime.now(timezone.utc)
+                self.add_to_CSV(time_date, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current)
                 # Add in the integration time for a certain number of scans
                 time.sleep(1)
         rotor.stop()
@@ -81,10 +81,10 @@ class DFMClass:
 
         self.save_file()
 
-    def add_to_CSV(self, time, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current):
+    def add_to_CSV(self, time_date, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current):
         
         self.final_data.loc[len(self.final_data)] = [
-            time, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current
+            time_date, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current
         ]
 
     def save_file(self):
