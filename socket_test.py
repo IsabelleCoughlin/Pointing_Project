@@ -54,6 +54,7 @@ class DFMClass:
             while offTarget:
                 ra_target = coord[0]
                 dec_target = coord[1]
+                print(f"Ra Target: {ra_target}, Dec Target: {dec_target}")
                 dfm_status = rotor.get_status()
                 rotor.print_status(dfm_status)
                 rotor.slew(ra_target, dec_target)
@@ -65,8 +66,9 @@ class DFMClass:
                 time_date = datetime.now(timezone.utc)
                 ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current = rotor.get_position()
                 # Double check that it is on target at correct coordinate
+                offTarget = False
                 if abs(ra_current - ra_target) > 0.01: # Can also change to set the tolerance
-                    offTarget = False
+                    offTarget = True
                     print("Target not reached, retrying slew command")
             self.add_to_CSV(time_date, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current)
             time.sleep(1) # Also replace with integration time
@@ -110,6 +112,7 @@ if __name__ == '__main__':
     rotor = DFM_FE(args.dfm_ip, args.dfm_port)
     rotor.dfm_init()
     
+    # FIXME: Create a new file with data/time in the title
     # Open DFM_Data.csv - where the time/position data will be saved
     file_path = os.getcwd() + '/DFM_Data.csv' # Fix the file path for saving
     # Testing variables
