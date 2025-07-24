@@ -23,6 +23,8 @@ class DFMClass:
 
 
     def get_coordinates(self, precision = 2):
+
+        #FIXME: Divide spacing by 15 for just RA
         # Return serpentine grid !
         coordinates = []
     
@@ -58,6 +60,7 @@ class DFMClass:
                 dfm_status = rotor.get_status()
                 rotor.print_status(dfm_status)
                 rotor.slew(ra_target, dec_target)
+                time.sleep(1)
                 while dfm_status[DFM_NEXTOBJ]:
                     dfm_status = rotor.get_status()
                     rotor.print_status(dfm_status)
