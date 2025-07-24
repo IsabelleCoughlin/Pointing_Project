@@ -56,6 +56,7 @@ class DFMClass:
                 dec_target = coord[1]
                 dfm_status = rotor.get_status()
                 rotor.print_status(dfm_status)
+                rotor.slew(ra_target, dec_target)
                 while dfm_status[DFM_NEXTOBJ]:
                     dfm_status = rotor.get_status()
                     rotor.print_status(dfm_status)
