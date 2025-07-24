@@ -108,6 +108,7 @@ if __name__ == '__main__':
 
     # Create rotor instance
     rotor = DFM_FE(args.dfm_ip, args.dfm_port)
+    rotor.dfm_init()
     
     # Open DFM_Data.csv - where the time/position data will be saved
     file_path = os.getcwd() + '/DFM_Data.csv' # Fix the file path for saving
