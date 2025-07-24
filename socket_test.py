@@ -111,10 +111,10 @@ if __name__ == '__main__':
     # Open DFM_Data.csv - where the time/position data will be saved
     file_path = os.getcwd() + '/DFM_Data.csv' # Fix the file path for saving
     # Testing variables
-    center_pos = [50, 50]
+    center_pos = [args.ra, args.dec]
     spacing = 0.09
     grid_size = 5
 
-    DFM = DFMClass(rotor, args.center_pos, args.spacing, args.grid_size, file_path)
+    DFM = DFMClass(rotor, center_pos, args.spacing, args.grid_size, file_path)
     coordinates = DFM.get_coordinates()
     DFM.raster_scan(coordinates)
