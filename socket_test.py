@@ -67,20 +67,20 @@ class DFMClass:
                 ra_target = coord[0]
                 dec_target = coord[1]
                 print(f"Ra Target: {ra_target}, Dec Target: {dec_target}")
-                dfm_status = rotor.get_status()
-                rotor.print_status(dfm_status)
-                rotor.slew(ra_target, dec_target)
+                dfm_status = self.rotor.get_status()
+                self.rotor.print_status(dfm_status)
+                self.rotor.slew(ra_target, dec_target)
                 time.sleep(2)
-                dfm_status = rotor.get_status()
-                rotor.print_status(dfm_status)
+                dfm_status = self.rotor.get_status()
+                self.rotor.print_status(dfm_status)
                 
                 while dfm_status[DFM_NEXTOBJ]:
-                    dfm_status = rotor.get_status()
-                    rotor.print_status(dfm_status)
+                    dfm_status = self.rotor.get_status()
+                    self.rotor.print_status(dfm_status)
                     time.sleep(5) # Wait 5 seconds until next check
                 # Do not continue until it the slew is done
                 time_date = datetime.now(timezone.utc)
-                ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current = rotor.get_position()
+                ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current = self.rotor.get_position()
                 # Double check that it is on target at correct coordinate
                 offTarget = False
                 if abs(ra_current - ra_target) > 0.01: # Can also change to set the tolerance
@@ -89,12 +89,12 @@ class DFMClass:
             self.add_to_CSV(time_date, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current)
             time.sleep(1) # Also replace with integration time
             for i in range(4): # Completes 5 scans in the same place
-                ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current = rotor.get_position()
+                ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current = self.rotor.get_position()
                 time_date = datetime.now(timezone.utc)
                 self.add_to_CSV(time_date, ra_target, dec_target, ha_current, ra_current, dec_current, lst_current, epoch_current, utc_current, year_current)
                 # Add in the integration time for a certain number of scans
                 time.sleep(1)
-        rotor.stop()
+        self.rotor.stop()
         print("Raster fininshed")
 
 
