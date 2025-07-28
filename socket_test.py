@@ -14,8 +14,8 @@ class DFMClass:
 
     def __init__(self, dfm_ip, dfm_port, ra, dec, spacing, grid_size):
         
-        rotor = DFM_FE(dfm_ip, dfm_port)
-        rotor.dfm_init()
+        self.rotor = DFM_FE(dfm_ip, dfm_port)
+        self.rotor.dfm_init()
 
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         file_name = f"DFM_Data_{timestamp}.csv"
@@ -24,7 +24,7 @@ class DFMClass:
         with open(file_path, 'w') as file:
             file.write(header + "\n")  # Write the header followed by a newline
 
-        self.rotor = rotor
+        
         self.center_pos = [ra, dec] # Make sure its in [ra, dec]
         self.spacing = spacing
         self.grid_size = grid_size
