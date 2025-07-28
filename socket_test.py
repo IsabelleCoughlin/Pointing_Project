@@ -125,12 +125,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Create rotor instance
-    rotor = DFM_FE(args.dfm_ip, args.dfm_port)
-    rotor.dfm_init()
+    
     
     # Create file with time in it's name
-    
 
-    DFM = DFMClass(rotor, args.ra, args.dec, args.spacing, args.grid_size)
+    DFM = DFMClass(args.dfm_ip, args.dfm_port, args.ra, args.dec, args.spacing, args.grid_size)
     coordinates = DFM.get_coordinates()
     DFM.raster_scan(coordinates)
