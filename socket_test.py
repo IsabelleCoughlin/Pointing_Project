@@ -12,10 +12,20 @@ DFM_SLEW_ENABLED = 20
 
 class DFMClass:
 
-    def __init__(self, rotor, center_pos, spacing, grid_size, file_path):
+    def __init__(self, dfm_ip, dfm_port, rotor, ra, dec, spacing, grid_size):
+
+        rotor = DFM_FE(dfm_ip, dfm_port)
+        rotor.dfm_init()
+
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        file_name = f"DFM_Data_{timestamp}.csv"
+        file_path = os.path.join(os.getcwd(), file_name)
+        header = "Time,ra_target,dec_target,ha_current,ra_current,dec_current,lst_current,epoch_current,utc_current,year_current"
+        with open(file_path, 'w') as file:
+            file.write(header + "\n")  # Write the header followed by a newline
 
         self.rotor = rotor
-        self.center_pos = center_pos  # Make sure its in [ra, dec]
+        self.center_pos = [ra, dec] # Make sure its in [ra, dec]
         self.spacing = spacing
         self.grid_size = grid_size
         self.final_data_path = file_path
@@ -118,14 +128,9 @@ if __name__ == '__main__':
     rotor = DFM_FE(args.dfm_ip, args.dfm_port)
     rotor.dfm_init()
     
-    # FIXME: Create a new file with data/time in the title
-    # Open DFM_Data.csv - where the time/position data will be saved
-    file_path = os.getcwd() + '/DFM_Data.csv' # Fix the file path for saving
-    # Testing variables
-    center_pos = [args.ra, args.dec]
-    spacing = 0.09
-    grid_size = 5
+    # Create file with time in it's name
+    
 
-    DFM = DFMClass(rotor, center_pos, args.spacing, args.grid_size, file_path)
+    DFM = DFMClass(rotor, args.ra, args.dec, args.spacing, args.grid_size)
     coordinates = DFM.get_coordinates()
     DFM.raster_scan(coordinates)

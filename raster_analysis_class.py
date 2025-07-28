@@ -298,25 +298,26 @@ class Graphical:
 
 if __name__ == "__main__":
 
-    file_path = '' # Add in the path to your file
+    file_path = '/Users/isabe/pointing_project/Pointing_Project/pattern.csv' # Add in the path to your file
 
-    object_name = "NA" # Add the object name
+    object_name = "Virgo-A" # Add the object name
 
     analysis = CSV_Analysis(file_path)
-    extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
-    print(extracted_rows.head()) # Shows what is happening after deleting unimportant rows
+    #extracted_rows = analysis.extract_rows(analysis.raw_data.copy())
+    #print(extracted_rows.head()) # Shows what is happening after deleting unimportant rows
 
-    grid_size = analysis.find_grid_size(extracted_rows) # Find the grid size
+    #grid_size = analysis.find_grid_size(extracted_rows) # Find the grid size
+    grid_size = analysis.find_grid_size(analysis.raw_data) # Find the grid size
 
-    file_name_2 = 'file_path.../Pulsars.csv' # Fix the file path for saving
-    final = FinalData(extracted_rows, file_name_2, grid_size, object_name)
+    file_name_2 = '/Users/isabe/pointing_project/Pointing_Project/Pulsars.csv' # Fix the file path for saving
+    final = FinalData(analysis.raw_data, file_name_2, grid_size, object_name)
     _, peak_index = final.find_peak()# Finds out where the peak is
     power_values_grid, power_values = final.raster_grid()
   
-    final.add_HADEC_to_final(peak_index) # Adds to new file
-    final.save_final()
+    #final.add_HADEC_to_final(peak_index) # Adds to new file
+    #final.save_final()
 
-    graphical = Graphical(extracted_rows, grid_size)
+    graphical = Graphical(analysis.raw_data, grid_size)
     graphical.time_plot()
     graphical.raster_plot(power_values_grid)
 
