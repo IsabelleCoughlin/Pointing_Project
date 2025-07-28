@@ -12,8 +12,8 @@ DFM_SLEW_ENABLED = 20
 
 class DFMClass:
 
-    def __init__(self, dfm_ip, dfm_port, rotor, ra, dec, spacing, grid_size):
-
+    def __init__(self, dfm_ip, dfm_port, ra, dec, spacing, grid_size):
+        
         rotor = DFM_FE(dfm_ip, dfm_port)
         rotor.dfm_init()
 
